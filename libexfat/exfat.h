@@ -26,7 +26,7 @@
 
 #ifndef ANDROID
 /* Android.bp is used instead of autotools when targeting Android */
-#include "config.h"
+//#include "config.h"
 #endif
 #include "compiler.h"
 #include "exfatfs.h"
@@ -121,8 +121,8 @@ struct exfat
 	char label[EXFAT_UTF8_ENAME_BUFFER_MAX];
 	void* zero_cluster;
 	int dmask, fmask;
-	uid_t uid;
-	gid_t gid;
+	//uid_t uid;
+	//gid_t gid;
 	int ro;
 	bool noatime;
 	enum { EXFAT_REPAIR_NO, EXFAT_REPAIR_ASK, EXFAT_REPAIR_YES } repair;

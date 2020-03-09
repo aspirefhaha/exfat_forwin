@@ -23,9 +23,13 @@
 
 #ifndef COMPILER_H_INCLUDED
 #define COMPILER_H_INCLUDED
-
+#define PRINT_MACRO_HELPER(x) #x
+#define PRINT_MACRO(x) #x"="PRINT_MACRO_HELPER(x)
 #if __STDC_VERSION__ < 199901L
-#error C99-compliant compiler is required
+#pragma message(PRINT_MACRO_HELPER(a))
+#pragma message(PRINT_MACRO_HELPER(__STDC_VERSION__))
+#pragma message(__STDC_VERSION__)
+//#error C99-compliant compiler is required
 #endif
 
 #if defined(__clang__)

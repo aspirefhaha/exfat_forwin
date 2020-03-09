@@ -24,7 +24,9 @@
 #include "cbm.h"
 #include "uct.h"
 #include "rootdir.h"
+#ifndef WIN32
 #include <unistd.h>
+#endif
 
 static off_t fat_alignment(void)
 {

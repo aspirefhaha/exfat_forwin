@@ -28,12 +28,45 @@
 #include "rootdir.h"
 #include <exfat.h>
 #include <sys/types.h>
+#ifndef WIN32
 #include <sys/time.h>
 #include <unistd.h>
+#else
+#include <getopt.h>
+#include <time.h>
+#include <windows.h>
+#pragma comment(lib,"libexfat.lib")
+#pragma comment(lib,"getopt.lib")
+
+#pragma comment(lib,"legacy_stdio_definitions.lib")
+
+//FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
+FILE __iob_func[3] = { NULL,NULL,NULL };
+int gettimeofday(struct timeval *tp, void *tzp)
+{
+	time_t clock;
+	struct tm tm;
+	SYSTEMTIME wtm;
+	GetLocalTime(&wtm);
+	tm.tm_year = wtm.wYear - 1900;
+	tm.tm_mon = wtm.wMonth - 1;
+	tm.tm_mday = wtm.wDay;
+	tm.tm_hour = wtm.wHour;
+	tm.tm_min = wtm.wMinute;
+	tm.tm_sec = wtm.wSecond;
+	tm.tm_isdst = -1;
+	clock = mktime(&tm);
+	tp->tv_sec = clock;
+	tp->tv_usec = wtm.wMilliseconds * 1000;
+	return (0);
+}
+
+#endif
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+
 
 const struct fs_object* objects[] =
 {
@@ -204,7 +237,7 @@ int main(int argc, char* argv[])
 	uint64_t first_sector = 0;
 	struct exfat_dev* dev;
 
-	printf("mkexfatfs %s\n", VERSION);
+	printf("mkexfatfs %s\n", "win_1.0");
 
 	while ((opt = getopt(argc, argv, "i:n:p:s:V")) != -1)
 	{

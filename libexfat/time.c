@@ -161,8 +161,11 @@ void exfat_tzset(void)
 {
 	time_t now;
 	struct tm* utc;
-
+#ifdef WIN32
+	_tzset();
+#else
 	tzset();
+#endif
 	now = time(NULL);
 	utc = gmtime(&now);
 	/* gmtime() always sets tm_isdst to 0 because daylight savings never

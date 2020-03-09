@@ -25,7 +25,7 @@
 
 #include "byteorder.h"
 #include "compiler.h"
-
+typedef  long long ssize_t;
 typedef uint32_t cluster_t;		/* cluster number */
 
 #define EXFAT_FIRST_DATA_CLUSTER 2

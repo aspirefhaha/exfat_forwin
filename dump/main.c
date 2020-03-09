@@ -22,7 +22,21 @@
 
 #include <exfat.h>
 #include <fcntl.h>
+#ifndef WIN32
 #include <unistd.h>
+#else
+#include <getopt.h>
+#include <stdio.h>
+
+#pragma comment(lib,"libexfat.lib")
+#pragma comment(lib,"getopt.lib")
+
+#pragma comment(lib,"legacy_stdio_definitions.lib")
+
+//FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
+FILE __iob_func[3] = { NULL,NULL,NULL };
+
+#endif
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -225,7 +239,7 @@ int main(int argc, char* argv[])
 			file_path = optarg;
 			break;
 		case 'V':
-			printf("dumpexfat %s\n", VERSION);
+			printf("dumpexfat %s\n", "win_1.0");
 			puts("Copyright (C) 2011-2018  Andrew Nayenko");
 			return 0;
 		default:

@@ -86,7 +86,7 @@ static int read_entries(struct exfat* ef, struct exfat_node* dir,
 		exfat_bug("attempted to read entries from a file");
 
 	size = exfat_generic_pread(ef, dir, entries,
-			sizeof(struct exfat_entry[n]), offset);
+			(sizeof(struct exfat_entry)*n), offset);
 	if (size == sizeof(struct exfat_entry) * n)
 		return 0; /* success */
 	if (size == 0)
@@ -94,7 +94,7 @@ static int read_entries(struct exfat* ef, struct exfat_node* dir,
 	if (size < 0)
 		return -EIO;
 	exfat_error("read %zd bytes instead of %zu bytes", size,
-			sizeof(struct exfat_entry[n]));
+			(sizeof(struct exfat_entry)*n));
 	return -EIO;
 }
 
@@ -107,13 +107,13 @@ static int write_entries(struct exfat* ef, struct exfat_node* dir,
 		exfat_bug("attempted to write entries into a file");
 
 	size = exfat_generic_pwrite(ef, dir, entries,
-			sizeof(struct exfat_entry[n]), offset);
+			(sizeof(struct exfat_entry)*n), offset);
 	if (size == sizeof(struct exfat_entry) * n)
 		return 0; /* success */
 	if (size < 0)
 		return -EIO;
 	exfat_error("wrote %zd bytes instead of %zu bytes", size,
-			sizeof(struct exfat_entry[n]));
+			(sizeof(struct exfat_entry)*n));
 	return -EIO;
 }
 
@@ -189,7 +189,12 @@ static bool check_entries(const struct exfat_entry* entry, int n)
 			         current == EXFAT_ENTRY_NONE ||
 			         current >= EXFAT_ENTRY_FILE_TAIL);
 			break;
+#ifndef WIN32
 		case EXFAT_ENTRY_FILE_TAIL ... 0xff:
+#else
+		case EXFAT_ENTRY_FILE_TAIL:
+		default:
+#endif
 			valid = (current >= EXFAT_ENTRY_FILE_TAIL ||
 			         current == EXFAT_ENTRY_NONE);
 			break;
@@ -337,27 +342,49 @@ static int parse_file_entries(struct exfat* ef, struct exfat_node* node,
 static int parse_file_entry(struct exfat* ef, struct exfat_node* parent,
 		struct exfat_node** node, off_t* offset, int n)
 {
+#ifndef WIN32
 	struct exfat_entry entries[n];
+#else
+	struct exfat_entry * entries = (struct exfat_entry*) malloc(sizeof(struct exfat_entry) * n);
+#endif
 	int rc;
 
 	rc = read_entries(ef, parent, entries, n, *offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
 		return rc;
+#else
+		return rc;
+#endif
+	}
 
 	/* a new node has zero references */
 	*node = allocate_node();
-	if (*node == NULL)
+	if (*node == NULL) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return -ENOMEM;
+	}
 	(*node)->entry_offset = *offset;
 
 	rc = parse_file_entries(ef, *node, entries, n);
 	if (rc != 0)
 	{
+#ifdef WIN32
+		free(entries);
+#endif
 		free(*node);
 		return rc;
 	}
 
-	*offset += sizeof(struct exfat_entry[n]);
+	*offset += (sizeof(struct exfat_entry)*n); 
+#ifdef WIN32
+	free(entries);
+#endif
 	return 0;
 }
 
@@ -628,27 +655,48 @@ void exfat_reset_cache(struct exfat* ef)
 
 int exfat_flush_node(struct exfat* ef, struct exfat_node* node)
 {
+#ifndef WIN32
 	struct exfat_entry entries[1 + node->continuations];
+#else
+	struct exfat_entry * entries;
+	entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * (1 + node->continuations));
+#endif
 	struct exfat_entry_meta1* meta1 = (struct exfat_entry_meta1*) &entries[0];
 	struct exfat_entry_meta2* meta2 = (struct exfat_entry_meta2*) &entries[1];
 	int rc;
 	le16_t edate, etime;
 
-	if (!node->is_dirty)
+	if (!node->is_dirty) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return 0; /* no need to flush */
+	}
 
 	if (ef->ro)
 		exfat_bug("unable to flush node to read-only FS");
 
-	if (node->parent == NULL)
+	if (node->parent == NULL) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return 0; /* do not flush unlinked node */
+	}
 
 	rc = read_entries(ef, node->parent, entries, 1 + node->continuations,
 			node->entry_offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return rc;
-	if (!check_entries(entries, 1 + node->continuations))
+	}
+	if (!check_entries(entries, 1 + node->continuations)) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return -EIO;
+	}
 
 	meta1->attrib = cpu_to_le16(node->attrib);
 	exfat_unix2exfat(node->mtime, &edate, &etime,
@@ -670,25 +718,44 @@ int exfat_flush_node(struct exfat* ef, struct exfat_node* node)
 	meta1->checksum = exfat_calc_checksum(entries, 1 + node->continuations);
 	rc = write_entries(ef, node->parent, entries, 1 + node->continuations,
 			node->entry_offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return rc;
+	}
 
-	node->is_dirty = false;
+	node->is_dirty = false; 
+#ifdef WIN32
+	free(entries);
+#endif
 	return exfat_flush(ef);
 }
 
 static int erase_entries(struct exfat* ef, struct exfat_node* dir, int n,
 		off_t offset)
 {
+#ifndef WIN32
 	struct exfat_entry entries[n];
+#else
+	struct exfat_entry * entries = (struct exfat_entry *)malloc(sizeof(struct exfat_entry)*n);
+#endif
 	int rc;
 	int i;
 
 	rc = read_entries(ef, dir, entries, n, offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return rc;
+	}
 	for (i = 0; i < n; i++)
 		entries[i].type &= ~EXFAT_ENTRY_VALID;
+	
+#ifdef WIN32
+	free(entries);
+#endif
 	return write_entries(ef, dir, entries, n, offset);
 }
 
@@ -807,22 +874,38 @@ int exfat_rmdir(struct exfat* ef, struct exfat_node* node)
 static int check_slot(struct exfat* ef, struct exfat_node* dir, off_t offset,
 		int n)
 {
+#ifndef WIN32
 	struct exfat_entry entries[n];
+#else
+	struct exfat_entry *entries = (struct exfat_entry *)malloc(sizeof(struct exfat_entry) * n);
+#endif
 	int rc;
 	int i;
 
 	/* Root directory contains entries, that don't have any nodes associated
 	   with them (clusters bitmap, upper case table, label). We need to be
 	   careful not to overwrite them. */
-	if (dir != ef->root)
+	if (dir != ef->root) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return 0;
+	}
 
 	rc = read_entries(ef, dir, entries, n, offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifdef WIN32
+		free(entries);
+#endif
 		return rc;
+	}
 	for (i = 0; i < n; i++)
 		if (entries[i].type & EXFAT_ENTRY_VALID)
 			return -EINVAL;
+	
+#ifdef WIN32
+	free(entries);
+#endif
 	return 0;
 }
 
@@ -882,10 +965,17 @@ static int find_slot(struct exfat* ef, struct exfat_node* dir,
 	/* no suitable slots found, extend the directory */
 	if (contiguous == 0)
 		*offset = dir->size;
+#if WIN32
+	return exfat_truncate(ef, dir,
+		ROUND_UP(dir->size + sizeof(struct exfat_entry)*(n - contiguous),
+			CLUSTER_SIZE(*ef->sb)),
+		true);
+#else
 	return exfat_truncate(ef, dir,
 			ROUND_UP(dir->size + sizeof(struct exfat_entry[n - contiguous]),
 					CLUSTER_SIZE(*ef->sb)),
 			true);
+#endif
 }
 
 static int commit_entry(struct exfat* ef, struct exfat_node* dir,
@@ -894,7 +984,11 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 	struct exfat_node* node;
 	const size_t name_length = exfat_utf16_length(name);
 	const int name_entries = DIV_ROUND_UP(name_length, EXFAT_ENAME_MAX);
+#ifdef WIN32
+	struct exfat_entry *entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * 2 + name_entries);
+#else
 	struct exfat_entry entries[2 + name_entries];
+#endif
 	struct exfat_entry_meta1* meta1 = (struct exfat_entry_meta1*) &entries[0];
 	struct exfat_entry_meta2* meta2 = (struct exfat_entry_meta2*) &entries[1];
 	int i;
@@ -932,18 +1026,35 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 
 	meta1->checksum = exfat_calc_checksum(entries, 2 + name_entries);
 	rc = write_entries(ef, dir, entries, 2 + name_entries, offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
+#endif
 		return rc;
+	}
 
 	node = allocate_node();
-	if (node == NULL)
+	if (node == NULL) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
+#endif
 		return -ENOMEM;
+	}
 	node->entry_offset = offset;
 	memcpy(node->name, name, name_length * sizeof(le16_t));
 	init_node_meta1(node, meta1);
 	init_node_meta2(node, meta2);
 
-	tree_attach(dir, node);
+	tree_attach(dir, node); 
+#ifndef WIN32
+	if (entries) {
+		free(entries);
+	}
+#endif
 	return 0;
 }
 
@@ -1024,23 +1135,39 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 {
 	const size_t name_length = exfat_utf16_length(name);
 	const int name_entries = DIV_ROUND_UP(name_length, EXFAT_ENAME_MAX);
+#ifndef WIN32
 	struct exfat_entry entries[2 + name_entries];
+#else
+	struct exfat_entry * entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry)* (2 + name_entries));
+#endif
 	struct exfat_entry_meta1* meta1 = (struct exfat_entry_meta1*) &entries[0];
 	struct exfat_entry_meta2* meta2 = (struct exfat_entry_meta2*) &entries[1];
 	int rc;
 	int i;
 
 	rc = read_entries(ef, node->parent, entries, 2, node->entry_offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
+#endif
 		return rc;
+	}
 
 	meta1->continuations = 1 + name_entries;
 	meta2->name_length = name_length;
 	meta2->name_hash = exfat_calc_name_hash(ef, name, name_length);
 
 	rc = erase_node(ef, node);
-	if (rc != 0)
+	if (rc != 0) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
+#endif
 		return rc;
+	}
 
 	node->entry_offset = new_offset;
 	node->continuations = 1 + name_entries;
@@ -1058,12 +1185,23 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 
 	meta1->checksum = exfat_calc_checksum(entries, 2 + name_entries);
 	rc = write_entries(ef, dir, entries, 2 + name_entries, new_offset);
-	if (rc != 0)
+	if (rc != 0) {
+#ifndef WIN32
+		if (entries) {
+			free(entries);
+		}
+#endif
 		return rc;
+	}
 
 	memcpy(node->name, name, (EXFAT_NAME_MAX + 1) * sizeof(le16_t));
 	tree_detach(node);
-	tree_attach(dir, node);
+	tree_attach(dir, node); 
+#ifndef WIN32
+	if (entries) {
+		free(entries);
+	}
+#endif
 	return 0;
 }
 

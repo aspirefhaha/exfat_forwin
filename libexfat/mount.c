@@ -25,7 +25,10 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <inttypes.h>
+
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <sys/types.h>
 
 static uint64_t rootdir_size(const struct exfat* ef)
@@ -99,8 +102,10 @@ static void parse_options(struct exfat* ef, const char* options)
 	ef->dmask = get_int_option(options, "dmask", 8, opt_umask);
 	ef->fmask = get_int_option(options, "fmask", 8, opt_umask);
 
+#ifndef WIN32
 	ef->uid = get_int_option(options, "uid", 10, geteuid());
 	ef->gid = get_int_option(options, "gid", 10, getegid());
+#endif
 
 	ef->noatime = match_option(options, "noatime");
 

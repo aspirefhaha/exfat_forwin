@@ -34,10 +34,14 @@ void exfat_stat(const struct exfat* ef, const struct exfat_node* node,
 	else
 		stbuf->st_mode = S_IFREG | (0777 & ~ef->fmask);
 	stbuf->st_nlink = 1;
+#if !defined(WIN32)
 	stbuf->st_uid = ef->uid;
 	stbuf->st_gid = ef->gid;
+#endif
 	stbuf->st_size = node->size;
+#if !defined(WIN32)
 	stbuf->st_blocks = ROUND_UP(node->size, CLUSTER_SIZE(*ef->sb)) / 512;
+#endif
 	stbuf->st_mtime = node->mtime;
 	stbuf->st_atime = node->atime;
 	/* set ctime to mtime to ensure we don't break programs that rely on ctime

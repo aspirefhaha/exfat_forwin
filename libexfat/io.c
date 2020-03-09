@@ -25,7 +25,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if !defined(WIN32)
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #if defined(__APPLE__)
@@ -53,12 +55,12 @@ struct exfat_dev
 	ublio_filehandle_t ufh;
 #endif
 };
-
+#if !defined(WIN32)
 static bool is_open(int fd)
 {
 	return fcntl(fd, F_GETFD) != -1;
 }
-
+#endif
 static int open_ro(const char* spec)
 {
 	return open(spec, O_RDONLY);
@@ -91,7 +93,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #ifdef USE_UBLIO
 	struct ublio_param up;
 #endif
-
+#if !defined(WIN32)
 	/* The system allocates file descriptors sequentially. If we have been
 	   started with stdin (0), stdout (1) or stderr (2) closed, the system
 	   will give us descriptor 0, 1 or 2 later when we open block device,
@@ -109,7 +111,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 			return NULL;
 		}
 	}
-
+#endif
 	dev = malloc(sizeof(struct exfat_dev));
 	if (dev == NULL)
 	{
@@ -167,6 +169,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		exfat_error("failed to fstat '%s'", spec);
 		return NULL;
 	}
+	
 	if (!S_ISBLK(stbuf.st_mode) &&
 		!S_ISCHR(stbuf.st_mode) &&
 		!S_ISREG(stbuf.st_mode))

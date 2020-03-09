@@ -26,6 +26,9 @@
 #include "rootdir.h"
 #include <limits.h>
 #include <string.h>
+#ifdef WIN32
+#include <platform.h>
+#endif
 
 static off_t cbm_alignment(void)
 {

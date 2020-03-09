@@ -481,3 +481,22 @@ ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 		exfat_update_mtime(node);
 	return size - remainder;
 }
+
+#ifdef WIN32
+int fsync(int fd) 
+{
+	return 0;
+}
+
+int pread(int fd, char * buf, size_t size, off_t off)
+{
+	return 0;
+}
+
+int pwrite(int fd, char * buf, size_t size, off_t off)
+{
+	return 0;
+}
+
+#endif
+

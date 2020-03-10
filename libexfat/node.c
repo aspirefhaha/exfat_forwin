@@ -23,7 +23,11 @@
 #include "exfat.h"
 #include <errno.h>
 #include <string.h>
+#if defined(WIN32) and _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
 
 #define EXFAT_ENTRY_NONE (-1)
 
@@ -657,14 +661,20 @@ int exfat_flush_node(struct exfat* ef, struct exfat_node* node)
 {
 #ifndef WIN32
 	struct exfat_entry entries[1 + node->continuations];
-#else
-	struct exfat_entry * entries;
-	entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * (1 + node->continuations));
-#endif
 	struct exfat_entry_meta1* meta1 = (struct exfat_entry_meta1*) &entries[0];
 	struct exfat_entry_meta2* meta2 = (struct exfat_entry_meta2*) &entries[1];
 	int rc;
 	le16_t edate, etime;
+#else
+	struct exfat_entry * entries;
+	struct exfat_entry_meta1* meta1;
+	struct exfat_entry_meta2* meta2;
+	int rc;
+	le16_t edate, etime;
+	entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * (1 + node->continuations));
+	meta1 = (struct exfat_entry_meta1*) &entries[0];
+	meta2 = (struct exfat_entry_meta2*) &entries[1];
+#endif
 
 	if (!node->is_dirty) {
 #ifdef WIN32
@@ -1304,7 +1314,7 @@ int exfat_rename(struct exfat* ef, const char* old_path, const char* new_path)
 	return rc;
 }
 
-void exfat_utimes(struct exfat_node* node, const struct timespec tv[2])
+void exfat_utimes(struct exfat_node* node, const struct timespec *tv)
 {
 	node->atime = tv[0].tv_sec;
 	node->mtime = tv[1].tv_sec;

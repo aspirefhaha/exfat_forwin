@@ -35,11 +35,12 @@
 #else
 #pragma comment(lib,"getopt.lib")
 #endif
-#pragma comment(lib,"legacy_stdio_definitions.lib")
 
 //FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
+#if _MSC_VER >= 1900
+#pragma comment(lib,"legacy_stdio_definitions.lib")
 FILE __iob_func[3] = { NULL,NULL,NULL };
-
+#endif
 #endif
 #include <inttypes.h>
 #include <stdio.h>

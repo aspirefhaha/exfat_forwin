@@ -139,10 +139,20 @@ static int vbr_write(struct exfat_dev* dev)
 	free(sector);
 	return 0;
 }
-
+#ifdef WIN32
+#if _MSC_VER < 1900
+const struct fs_object vbr =
+{
+	vbr_alignment,
+	vbr_size,
+	vbr_write,
+};
+#else
 const struct fs_object vbr =
 {
 	.get_alignment = vbr_alignment,
 	.get_size = vbr_size,
 	.write = vbr_write,
 };
+#endif
+#endif

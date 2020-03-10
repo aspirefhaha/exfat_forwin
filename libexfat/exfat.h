@@ -33,7 +33,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#ifdef WIN32
+#if _MS_VER < 1900
+#include "../win/libexfat/stdbool.h"
+#ifndef _CRT_NO_TIME_T
+struct timespec
+{
+	time_t tv_sec;
+	long tv_nsec;
+};
+#endif
+#else
 #include <stdbool.h>
+#endif
+#else
+#include <stdbool.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -219,7 +234,7 @@ int exfat_rmdir(struct exfat* ef, struct exfat_node* node);
 int exfat_mknod(struct exfat* ef, const char* path);
 int exfat_mkdir(struct exfat* ef, const char* path);
 int exfat_rename(struct exfat* ef, const char* old_path, const char* new_path);
-void exfat_utimes(struct exfat_node* node, const struct timespec tv[2]);
+void exfat_utimes(struct exfat_node* node, const struct timespec *tv);
 void exfat_update_atime(struct exfat_node* node);
 void exfat_update_mtime(struct exfat_node* node);
 const char* exfat_get_label(struct exfat* ef);

@@ -26,3 +26,12 @@ Makefile
 /label/exfatlabel
 /libexfat/libexfat.a
 /mkfs/mkexfatfs
+
+*.opensdf
+*.suo
+*.sdf
+*.user
+x64
+Debug
+ipch
+Release

@@ -41,11 +41,14 @@
 #else
 #pragma comment(lib,"getopt.lib")
 #endif
-
+#ifdef WIN32
+#if _MSC_VER >= 1900
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 
 //FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
 FILE __iob_func[3] = { NULL,NULL,NULL };
+#endif
+#endif
 int gettimeofday(struct timeval *tp, void *tzp)
 {
 	time_t clock;
@@ -66,7 +69,11 @@ int gettimeofday(struct timeval *tp, void *tzp)
 }
 
 #endif
+#if defined(WIN32) and _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -254,7 +261,15 @@ int main(int argc, char* argv[])
 			volume_label = optarg;
 			break;
 		case 'p':
+#ifdef WIN32
+#if _MSC_VER < 1900
+			first_sector = _strtoi64(optarg, NULL, 10);
+#else
 			first_sector = strtoll(optarg, NULL, 10);
+#endif
+#else
+			first_sector = strtoll(optarg, NULL, 10);
+#endif
 			break;
 		case 's':
 			spc_bits = logarithm2(atoi(optarg));

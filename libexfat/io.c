@@ -21,7 +21,11 @@
 */
 
 #include "exfat.h"
+#if _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -43,6 +47,34 @@
 #ifdef USE_UBLIO
 #include <sys/uio.h>
 #include <ublio.h>
+#endif
+
+#ifdef WIN32
+int fsync(int fd) 
+{
+	//sync();
+	return 0;
+}
+
+int pread(int fd, char * buf, size_t size, off_t off)
+{
+	off_t ret = lseek(fd,  off, SEEK_SET);
+	if (ret == (off_t)-1) {
+		return 0;
+	}
+	return read(fd, buf, size);
+	
+}
+
+int pwrite(int fd, char * buf, size_t size, off_t off)
+{
+	off_t ret = lseek(fd,  off,SEEK_SET );
+	if (ret == (off_t)-1) {
+		return 0;
+	}
+	return write(fd, buf, size);
+}
+
 #endif
 
 struct exfat_dev
@@ -482,31 +514,5 @@ ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 	return size - remainder;
 }
 
-#ifdef WIN32
-int fsync(int fd) 
-{
-	//sync();
-	return 0;
-}
 
-int pread(int fd, char * buf, size_t size, off_t off)
-{
-	off_t ret = lseek(fd,  off, SEEK_SET);
-	if (ret == (off_t)-1) {
-		return 0;
-	}
-	return read(fd, buf, size);
-	
-}
-
-int pwrite(int fd, char * buf, size_t size, off_t off)
-{
-	off_t ret = lseek(fd,  off,SEEK_SET );
-	if (ret == (off_t)-1) {
-		return 0;
-	}
-	return write(fd, buf, size);
-}
-
-#endif
 

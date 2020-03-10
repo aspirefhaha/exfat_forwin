@@ -8,11 +8,18 @@ Supported operating systems:
 * GNU/Linux
 * Mac OS X 10.5 or later
 * FreeBSD
+* Windows (VS2010 VS2015 VS2017)
 
 Most GNU/Linux distributions already have fuse-exfat and exfat-utils in their repositories, so you can just install and use them. The next chapter describes how to compile them from source.
 
 Compiling
 ---------
+
+On Windows
+ 
+ * Use Visual Studio 2010/2015/2017
+ * open win.sln
+ * build libexfat -> getopt -> dumpexfat -> mkfs
 
 To build this project on GNU/Linux you need to install the following packages:
 

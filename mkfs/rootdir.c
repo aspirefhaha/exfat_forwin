@@ -93,10 +93,20 @@ static int rootdir_write(struct exfat_dev* dev)
 		return 1;
 	return 0;
 }
-
+#ifdef WIN32
+#if _MSC_VER < 1900
+const struct fs_object rootdir =
+{
+	rootdir_alignment,
+	rootdir_size,
+	rootdir_write,
+};
+#else
 const struct fs_object rootdir =
 {
 	.get_alignment = rootdir_alignment,
 	.get_size = rootdir_size,
 	.write = rootdir_write,
 };
+#endif
+#endif

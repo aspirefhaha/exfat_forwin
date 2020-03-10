@@ -92,6 +92,9 @@ typedef _off_t off_t;
 #define	S_ISCHR(mode)	 __S_ISTYPE((mode), __S_IFCHR)
 #define	S_ISBLK(mode)	 __S_ISTYPE((mode), __S_IFBLK)
 #define	S_ISREG(mode)	 __S_ISTYPE((mode), __S_IFREG)
+#if _MSC_VER < 1900
+#define inline _inline
+#endif
 #else
 #error Unknown platform
 #endif

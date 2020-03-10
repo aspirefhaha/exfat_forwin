@@ -25,7 +25,11 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
+#if defined(WIN32) and _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 
@@ -161,4 +165,5 @@ off_t get_position(const struct fs_object* object)
 		position += (*pp)->get_size();
 	}
 	exfat_bug("unknown object");
+	return 0;
 }

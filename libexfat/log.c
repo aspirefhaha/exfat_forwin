@@ -30,6 +30,15 @@
 #include <syslog.h>
 #endif
 #include <unistd.h>
+#else
+#if _MSC_VER < 1900
+#ifndef va_copy
+
+#define va_copy(dst, src)   memcpy(&(dst), &(src), sizeof(va_list))
+
+#endif
+
+#endif
 #endif
 int exfat_errors;
 

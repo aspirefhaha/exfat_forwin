@@ -29,8 +29,12 @@
 #include <stdio.h>
 
 #pragma comment(lib,"libexfat.lib")
-#pragma comment(lib,"getopt.lib")
 
+#ifdef _DEBUG
+#pragma comment(lib,"getoptd.lib")
+#else
+#pragma comment(lib,"getopt.lib")
+#endif
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 
 //FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 

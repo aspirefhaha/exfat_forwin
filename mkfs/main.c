@@ -36,7 +36,11 @@
 #include <time.h>
 #include <windows.h>
 #pragma comment(lib,"libexfat.lib")
+#ifdef _DEBUG
+#pragma comment(lib,"getoptd.lib")
+#else
 #pragma comment(lib,"getopt.lib")
+#endif
 
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 

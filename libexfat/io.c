@@ -485,17 +485,27 @@ ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 #ifdef WIN32
 int fsync(int fd) 
 {
+	//sync();
 	return 0;
 }
 
 int pread(int fd, char * buf, size_t size, off_t off)
 {
-	return 0;
+	off_t ret = lseek(fd,  off, SEEK_SET);
+	if (ret == (off_t)-1) {
+		return 0;
+	}
+	return read(fd, buf, size);
+	
 }
 
 int pwrite(int fd, char * buf, size_t size, off_t off)
 {
-	return 0;
+	off_t ret = lseek(fd,  off,SEEK_SET );
+	if (ret == (off_t)-1) {
+		return 0;
+	}
+	return write(fd, buf, size);
 }
 
 #endif

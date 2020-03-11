@@ -42,7 +42,8 @@
 #pragma comment(lib,"getopt.lib")
 #endif
 #ifdef WIN32
-#if _MSC_VER >= 1900
+#if _MSC_VER <= 1900
+#else
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 
 //FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
@@ -69,7 +70,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
 }
 
 #endif
-#if defined(WIN32) and _MSC_VER < 1900
+#if defined(WIN32) && _MSC_VER < 1900
 #include "../win/libexfat/inttypes.h"
 #else
 #include <inttypes.h>

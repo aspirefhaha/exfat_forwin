@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <time.h>
 #ifdef WIN32
-#if _MS_VER < 1900
+#if _MSC_VER < 1900
 #include "../win/libexfat/stdbool.h"
 #ifndef _CRT_NO_TIME_T
 struct timespec

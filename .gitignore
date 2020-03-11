@@ -35,3 +35,7 @@ x64
 Debug
 ipch
 Release
+*.htm
+*.db
+*.opendb
+*.filters

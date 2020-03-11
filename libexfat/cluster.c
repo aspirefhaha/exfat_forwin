@@ -173,20 +173,20 @@ int exfat_flush(struct exfat* ef)
 			exfat_error("failed to write clusters bitmap");
 			return -EIO;
 		}
-		ef->cmap.dirty = false;
+		ef->cmap.dirty = 0;
 	}
 
 	return 0;
 }
 
-static bool set_next_cluster(const struct exfat* ef, bool contiguous,
+static int set_next_cluster(const struct exfat* ef, int contiguous,
 		cluster_t current, cluster_t next)
 {
 	off_t fat_offset;
 	le32_t next_le32;
 
 	if (contiguous)
-		return true;
+		return 1;
 	fat_offset = s2o(ef, le32_to_cpu(ef->sb->fat_sector_start))
 		+ current * sizeof(cluster_t);
 	next_le32 = cpu_to_le32(next);
@@ -194,9 +194,9 @@ static bool set_next_cluster(const struct exfat* ef, bool contiguous,
 	{
 		exfat_error("failed to write the next cluster %#x after %#x", next,
 				current);
-		return false;
+		return 0;
 	}
-	return true;
+	return 1;
 }
 
 static cluster_t allocate_cluster(struct exfat* ef, cluster_t hint)
@@ -216,7 +216,7 @@ static cluster_t allocate_cluster(struct exfat* ef, cluster_t hint)
 		return EXFAT_CLUSTER_END;
 	}
 
-	ef->cmap.dirty = true;
+	ef->cmap.dirty = 1;
 	return cluster;
 }
 
@@ -227,18 +227,18 @@ static void free_cluster(struct exfat* ef, cluster_t cluster)
 				ef->cmap.size);
 
 	BMAP_CLR(ef->cmap.chunk, cluster - EXFAT_FIRST_DATA_CLUSTER);
-	ef->cmap.dirty = true;
+	ef->cmap.dirty = 1;
 }
 
-static bool make_noncontiguous(const struct exfat* ef, cluster_t first,
+static int make_noncontiguous(const struct exfat* ef, cluster_t first,
 		cluster_t last)
 {
 	cluster_t c;
 
 	for (c = first; c < last; c++)
-		if (!set_next_cluster(ef, false, c, c + 1))
-			return false;
-	return true;
+		if (!set_next_cluster(ef, 0, c, c + 1))
+			return 0;
+	return 1;
 }
 
 static int shrink_file(struct exfat* ef, struct exfat_node* node,
@@ -276,7 +276,7 @@ static int grow_file(struct exfat* ef, struct exfat_node* node,
 		node->fptr_cluster = node->start_cluster = previous;
 		allocated = 1;
 		/* file consists of only one cluster, so it's contiguous */
-		node->is_contiguous = true;
+		node->is_contiguous = 1;
 	}
 
 	while (allocated < difference)
@@ -294,8 +294,8 @@ static int grow_file(struct exfat* ef, struct exfat_node* node,
 			   anymore */
 			if (!make_noncontiguous(ef, node->start_cluster, previous))
 				return -EIO;
-			node->is_contiguous = false;
-			node->is_dirty = true;
+			node->is_contiguous = 0;
+			node->is_dirty = 1;
 		}
 		if (!set_next_cluster(ef, node->is_contiguous, previous, next))
 			return -EIO;
@@ -341,7 +341,7 @@ static int shrink_file(struct exfat* ef, struct exfat_node* node,
 	{
 		previous = node->start_cluster;
 		node->start_cluster = EXFAT_CLUSTER_FREE;
-		node->is_dirty = true;
+		node->is_dirty = 1;
 	}
 	node->fptr_index = 0;
 	node->fptr_cluster = node->start_cluster;
@@ -366,14 +366,14 @@ static int shrink_file(struct exfat* ef, struct exfat_node* node,
 	return 0;
 }
 
-static bool erase_raw(struct exfat* ef, size_t size, off_t offset)
+static int erase_raw(struct exfat* ef, size_t size, off_t offset)
 {
 	if (exfat_pwrite(ef->dev, ef->zero_cluster, size, offset) < 0)
 	{
 		exfat_error("failed to erase %zu bytes at %"PRId64, size, offset);
-		return false;
+		return 0;
 	}
-	return true;
+	return 1;
 }
 
 static int erase_range(struct exfat* ef, struct exfat_node* node,
@@ -412,7 +412,7 @@ static int erase_range(struct exfat* ef, struct exfat_node* node,
 }
 
 int exfat_truncate(struct exfat* ef, struct exfat_node* node, uint64_t size,
-		bool erase)
+		int erase)
 {
 	uint32_t c1 = bytes2clusters(ef, node->size);
 	uint32_t c2 = bytes2clusters(ef, size);
@@ -441,7 +441,7 @@ int exfat_truncate(struct exfat* ef, struct exfat_node* node, uint64_t size,
 
 	exfat_update_mtime(node);
 	node->size = size;
-	node->is_dirty = true;
+	node->is_dirty = 1;
 	return 0;
 }
 

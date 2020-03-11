@@ -38,4 +38,5 @@ Release
 *.htm
 *.db
 *.opendb
+*.qm
 *.filters

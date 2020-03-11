@@ -1,11 +1,11 @@
-#ifndef QOUTENVFSMODEL_H
-#define QOUTENVFSMODEL_H
+#ifndef EXFATFSMODEL_H
+#define EXFATFSMODEL_H
 
 #include <QAbstractItemModel>
 #include <qthread.h>
 #include <Windows.h>
 
-enum OUTFSTYPE {
+enum EXFATITEMTYPE {
 	OUTFTDRIVE=1,
 	OUTFTSPEC,
 	OUTFTDIR,
@@ -13,21 +13,21 @@ enum OUTFSTYPE {
 	OUTFTUNKNOWN
 };
 
-struct OutEnvFSPrivate 
+struct ExfatFSPrivae 
 {
 	QString absPath;
-	OUTFSTYPE fstype;
+	EXFATITEMTYPE fstype;
 	int m_col;
 	int m_row;
-	OutEnvFSPrivate * m_pParent;
+	ExfatFSPrivae * m_pParent;
 	
-	//QList<OutEnvFSPrivate *> m_lsChildren;
+	//QList<ExfatFSPrivae *> m_lsChildren;
 
-	bool match(QString name,OUTFSTYPE fstype){
+	bool match(QString name,EXFATITEMTYPE fstype){
 		return name==absPath && fstype==this->fstype;
 	}
 
-	explicit OutEnvFSPrivate(QString devname,OUTFSTYPE tt,int row,int col,OutEnvFSPrivate * parent)
+	explicit ExfatFSPrivae(QString devname,EXFATITEMTYPE tt,int row,int col,ExfatFSPrivae * parent)
 		:absPath(devname),fstype(tt),m_row(row),m_col(col),m_pParent(parent){}
 };
 
@@ -46,9 +46,9 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
-	void addRootDevice(QString,OUTFSTYPE);
+	void addRootDevice(QString,EXFATITEMTYPE);
 
-	OutEnvFSPrivate * findOutFSChild (QString abspath,OUTFSTYPE type)const;
+	ExfatFSPrivae * findOutFSChild (QString abspath,EXFATITEMTYPE type)const;
 
 	void refreshRootDevice();
 	const static int ONCEBLOCK = 512;
@@ -60,9 +60,8 @@ public slots:
 
 	
 private:
-	QList<OutEnvFSPrivate *> m_rootDrives;
-	QList<OutEnvFSPrivate *> m_allItems;
-	static HINSTANCE LibHandle;
+	QList<ExfatFSPrivae *> m_rootDrives;
+	QList<ExfatFSPrivae *> m_allItems;
 };
 
 enum BGWORKMODE
@@ -117,4 +116,4 @@ private:
 	void CopyDirToInner(const char * outdir,const char * outdirname,const char * indir,const char * outrootdir);
 };
 
-#endif // QOUTENVFSMODEL_H
+#endif // EXFATFSMODEL_H

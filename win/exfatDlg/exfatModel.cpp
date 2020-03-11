@@ -1,7 +1,10 @@
 #ifdef UNICODE
 #undef UNICODE
 #endif
-
+#define __bool_true_false_are_defined 1
+extern "C"{
+#include "exfat.h"
+}
 #include "exfatModel.h"
 #include <qimage.h>
 #include <qdir.h>
@@ -13,14 +16,9 @@
 #include <Windows.h>
 
 
-HINSTANCE ExfatModel::LibHandle = NULL;
-
-
-
 ExfatModel::ExfatModel(QObject *parent)
 	: QAbstractItemModel(parent)
 {
-	LibHandle = NULL;
 #if 0
 	PFhahaLibGetProcStruct ProcAdd;
 	if(LibHandle == NULL){
@@ -46,16 +44,12 @@ ExfatModel::ExfatModel(QObject *parent)
 
 ExfatModel::~ExfatModel()
 {
-	if(LibHandle!=NULL){
-		FreeLibrary(LibHandle);
-		LibHandle = NULL;
-		//pFunc = NULL;
-	}
+	
 	qDeleteAll(m_allItems);
 }
 
-OutEnvFSPrivate * ExfatModel::findOutFSChild(QString abspath,OUTFSTYPE type) const{
-	QList<OutEnvFSPrivate *>::const_iterator pitem= m_allItems.begin();
+ExfatFSPrivae * ExfatModel::findOutFSChild(QString abspath,EXFATITEMTYPE type) const{
+	QList<ExfatFSPrivae *>::const_iterator pitem= m_allItems.begin();
 	while(pitem != m_allItems.end()){
 		if((*pitem)->match(abspath,type)){
 			return *pitem;
@@ -487,12 +481,12 @@ QModelIndex ExfatModel::index(int row, int column,
         // 其它层节点绑定关系
         if (parent.internalPointer() != nullptr)
         {
-            OutEnvFSPrivate * parentItemPtr = static_cast<OutEnvFSPrivate *>(parent.internalPointer());
+            ExfatFSPrivae * parentItemPtr = static_cast<ExfatFSPrivae *>(parent.internalPointer());
 			/*if(selItemPtr == NULL){
 				selItemPtr = m_rootDrives.at(row);
 			}*/
 			QString childPath ;
-			OUTFSTYPE childType = OUTFTUNKNOWN;
+			EXFATITEMTYPE childType = OUTFTUNKNOWN;
 			switch(parentItemPtr->fstype){
 			case OUTFTDRIVE:
 			case OUTFTDIR:
@@ -562,10 +556,10 @@ QModelIndex ExfatModel::index(int row, int column,
 #endif
 					//}
 					if(childType != OUTFTUNKNOWN){
-						OutEnvFSPrivate * pFind = NULL;
+						ExfatFSPrivae * pFind = NULL;
 						pFind = findOutFSChild(childPath,childType);
 						if(pFind == NULL){
-							pFind = new OutEnvFSPrivate(childPath,childType,row,column,parentItemPtr);
+							pFind = new ExfatFSPrivae(childPath,childType,row,column,parentItemPtr);
 							(const_cast<ExfatModel*>(this))->m_allItems.append(pFind);
 						}
 						return createIndex(row,column,pFind);
@@ -576,7 +570,7 @@ QModelIndex ExfatModel::index(int row, int column,
 			case OUTFTFILE:
 				{
 					//QFileInfo info(parentItemPtr->first);
-					//return createIndex(row,column,new QPair<QString,OUTFSTYPE>(info.absoluteFilePath(),OUTFTFILE));
+					//return createIndex(row,column,new QPair<QString,EXFATITEMTYPE>(info.absoluteFilePath(),OUTFTFILE));
 					return QModelIndex();
 				}
 				break;
@@ -666,8 +660,8 @@ QVariant ExfatModel::data(const QModelIndex & index,
 	
 	//qDebug() << "data role " << role << " row " << index.row() << " column " << index.column() ;
 	if(role == Qt::DecorationRole && index.column() == 0){
-		OutEnvFSPrivate * selPtr = static_cast<OutEnvFSPrivate *>(index.internalPointer()); 
-		OUTFSTYPE fstype = selPtr->fstype;
+		ExfatFSPrivae * selPtr = static_cast<ExfatFSPrivae *>(index.internalPointer()); 
+		EXFATITEMTYPE fstype = selPtr->fstype;
 		QFileIconProvider icon_provider;
 		switch(fstype){
 		case OUTFTFILE:
@@ -693,8 +687,8 @@ QVariant ExfatModel::data(const QModelIndex & index,
     if(role == Qt::DisplayRole)
     {
 		//int rowcount = index.row();
-		OutEnvFSPrivate * selPtr = static_cast<OutEnvFSPrivate *>(index.internalPointer()); 
-		OUTFSTYPE fstype = selPtr->fstype;
+		ExfatFSPrivae * selPtr = static_cast<ExfatFSPrivae *>(index.internalPointer()); 
+		EXFATITEMTYPE fstype = selPtr->fstype;
 		QString fspath = selPtr->absPath;
 		//qDebug() << "want display " << fspath << " type" << fstype << " row " << index.row() << " column " << index.column() << " parent" << index.parent();
 		switch(fstype){
@@ -878,7 +872,7 @@ QModelIndex ExfatModel::parent(const QModelIndex &child) const
 		return QModelIndex();
 	}
 
-	OutEnvFSPrivate* childData = static_cast<OutEnvFSPrivate*>(child.internalPointer());
+	ExfatFSPrivae* childData = static_cast<ExfatFSPrivae*>(child.internalPointer());
 	for(int i = 0; i < m_rootDrives.count(); i++)
 	{
 		if(m_rootDrives[i] == childData) //* 如果是父节点（分组）则返回无效父节点（分组没有父节点）
@@ -888,7 +882,7 @@ QModelIndex ExfatModel::parent(const QModelIndex &child) const
 		}
 	}
 	for(int i = 0; i<m_allItems.count();i++){
-		OutEnvFSPrivate* item = m_allItems[i];
+		ExfatFSPrivae* item = m_allItems[i];
 		if(item == childData){
 			if(item->m_pParent != NULL){
 				//qDebug() << "find parent " << item->m_pParent;
@@ -933,10 +927,10 @@ void ExfatModel::refreshRootDevice()
 #endif
 }
 
-void ExfatModel::addRootDevice(QString devname,OUTFSTYPE fstype)
+void ExfatModel::addRootDevice(QString devname,EXFATITEMTYPE fstype)
 {
 	bool alreadyHas = false;
-	QList<OutEnvFSPrivate*>::iterator litem = m_rootDrives.begin();
+	QList<ExfatFSPrivae*>::iterator litem = m_rootDrives.begin();
 	while(litem != m_rootDrives.end()){
 		if((*litem)->match(devname, fstype)){
 			alreadyHas = true;
@@ -945,7 +939,7 @@ void ExfatModel::addRootDevice(QString devname,OUTFSTYPE fstype)
 		litem++;
 	}
 	if(!alreadyHas){
-		OutEnvFSPrivate * newItem = new OutEnvFSPrivate(devname,fstype,m_rootDrives.size(),0,NULL);
+		ExfatFSPrivae * newItem = new ExfatFSPrivae(devname,fstype,m_rootDrives.size(),0,NULL);
 		this->m_rootDrives.append(newItem);
 		this->m_allItems.append(newItem);
 	}
@@ -957,7 +951,7 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 		return m_rootDrives.size();
 	}
 	else{
-		OutEnvFSPrivate * parentData = static_cast<OutEnvFSPrivate*>(parent.internalPointer());
+		ExfatFSPrivae * parentData = static_cast<ExfatFSPrivae*>(parent.internalPointer());
 		switch(parentData->fstype ){
 		case OUTFTDRIVE:
 		case OUTFTDIR:

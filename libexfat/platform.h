@@ -72,8 +72,12 @@
 #define EXFAT_BYTE_ORDER __BYTE_ORDER
 #define EXFAT_LITTLE_ENDIAN __LITTLE_ENDIAN
 #define EXFAT_BIG_ENDIAN __BIG_ENDIAN
+
+#ifndef _OFF_T_DEFINED
 typedef long long _off_t;
 typedef _off_t off_t;
+#define _OFF_T_DEFINED
+#endif
 
 #define	__S_IFMT	0170000	/* These bits determine file type.  */
 

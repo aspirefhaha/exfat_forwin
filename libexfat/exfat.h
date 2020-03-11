@@ -100,10 +100,10 @@ struct exfat_node
 	cluster_t start_cluster;
 	uint16_t attrib;
 	uint8_t continuations;
-	bool is_contiguous : 1;
-	bool is_cached : 1;
-	bool is_dirty : 1;
-	bool is_unlinked : 1;
+	int is_contiguous : 1;
+	int is_cached : 1;
+	int is_dirty : 1;
+	int is_unlinked : 1;
 	uint64_t size;
 	time_t mtime, atime;
 	le16_t name[EXFAT_NAME_MAX + 1];
@@ -130,7 +130,7 @@ struct exfat
 		uint32_t size;				/* in bits */
 		bitmap_t* chunk;
 		uint32_t chunk_size;		/* in bits */
-		bool dirty;
+		int dirty;
 	}
 	cmap;
 	char label[EXFAT_UTF8_ENAME_BUFFER_MAX];
@@ -141,7 +141,7 @@ struct exfat
 	gid_t gid;
 #endif
 	int ro;
-	bool noatime;
+	int noatime;
 	enum { EXFAT_REPAIR_NO, EXFAT_REPAIR_ASK, EXFAT_REPAIR_YES } repair;
 };
 
@@ -200,7 +200,7 @@ cluster_t exfat_advance_cluster(const struct exfat* ef,
 int exfat_flush_nodes(struct exfat* ef);
 int exfat_flush(struct exfat* ef);
 int exfat_truncate(struct exfat* ef, struct exfat_node* node, uint64_t size,
-		bool erase);
+		int erase);
 uint32_t exfat_count_free_clusters(const struct exfat* ef);
 int exfat_find_used_sectors(const struct exfat* ef, off_t* a, off_t* b);
 
@@ -252,12 +252,12 @@ void exfat_unix2exfat(time_t unix_time, le16_t* date, le16_t* time,
 		uint8_t* centisec, uint8_t* tzoffset);
 void exfat_tzset(void);
 
-bool exfat_ask_to_fix(const struct exfat* ef);
-bool exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
+int exfat_ask_to_fix(const struct exfat* ef);
+int exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
 		uint32_t vbr_checksum);
-bool exfat_fix_invalid_node_checksum(const struct exfat* ef,
+int exfat_fix_invalid_node_checksum(const struct exfat* ef,
 		struct exfat_node* node);
-bool exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
+int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 		const struct exfat_entry* entry, off_t offset);
 
 #endif /* ifndef EXFAT_H_INCLUDED */

@@ -135,7 +135,7 @@ static void dump_sectors(struct exfat* ef)
 	puts("");
 }
 
-static int dump_full(const char* spec, bool used_sectors)
+static int dump_full(const char* spec, int used_sectors)
 {
 	struct exfat ef;
 	uint32_t free_clusters;
@@ -228,8 +228,8 @@ int main(int argc, char* argv[])
 {
 	int opt;
 	const char* spec = NULL;
-	bool sb_only = false;
-	bool used_sectors = false;
+	int sb_only = false;
+	int used_sectors = false;
 	const char* file_path = NULL;
 
 	while ((opt = getopt(argc, argv, "suf:V")) != -1)

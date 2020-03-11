@@ -18,7 +18,7 @@ implements subclause 7.16 of ISO/IEC 9899:1999 (E)
 #undef false
 
 //#if __STDC_VERSION__ < 199901
-typedef int _Bool;
+//typedef int _Bool;
 //#endif
 
 #define bool _Bool

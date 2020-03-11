@@ -152,14 +152,14 @@ int exfat_lookup(struct exfat* ef, struct exfat_node** node,
 	return 0;
 }
 
-static bool is_last_comp(const char* comp, size_t length)
+static int is_last_comp(const char* comp, size_t length)
 {
 	const char* p = comp + length;
 
 	return get_comp(p, &p) == 0;
 }
 
-static bool is_allowed(const char* comp, size_t length)
+static int is_allowed(const char* comp, size_t length)
 {
 	size_t i;
 

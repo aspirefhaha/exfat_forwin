@@ -74,7 +74,7 @@ int exfat_cleanup_node(struct exfat* ef, struct exfat_node* node)
 	if (node->is_unlinked)
 	{
 		/* free all clusters and node structure itself */
-		rc = exfat_truncate(ef, node, 0, true);
+		rc = exfat_truncate(ef, node, 0, 1);
 		/* free the node even in case of error or its memory will be lost */
 		free(node);
 	}
@@ -165,7 +165,7 @@ static void init_node_name(struct exfat_node* node,
 				EXFAT_ENAME_MAX * sizeof(le16_t));
 }
 
-static bool check_entries(const struct exfat_entry* entry, int n)
+static int check_entries(const struct exfat_entry* entry, int n)
 {
 	int previous = EXFAT_ENTRY_NONE;
 	int current;
@@ -174,7 +174,7 @@ static bool check_entries(const struct exfat_entry* entry, int n)
 	/* check transitions between entries types */
 	for (i = 0; i < n + 1; previous = current, i++)
 	{
-		bool valid = false;
+		int valid = 0;
 
 		current = (i < n) ? entry[i].type : EXFAT_ENTRY_NONE;
 		switch (previous)
@@ -208,13 +208,13 @@ static bool check_entries(const struct exfat_entry* entry, int n)
 		{
 			exfat_error("unexpected entry type %#x after %#x at %d/%d",
 					current, previous, i, n);
-			return false;
+			return 0;
 		}
 	}
-	return true;
+	return 1;
 }
 
-static bool check_node(const struct exfat* ef, struct exfat_node* node,
+static int check_node(const struct exfat* ef, struct exfat_node* node,
 		le16_t actual_checksum, const struct exfat_entry_meta1* meta1,
 		const struct exfat_entry_meta2* meta2)
 {
@@ -222,7 +222,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 	uint64_t clusters_heap_size =
 			(uint64_t) le32_to_cpu(ef->sb->cluster_count) * cluster_size;
 	char buffer[EXFAT_UTF8_NAME_BUFFER_MAX];
-	bool ret = true;
+	int ret = 1;
 
 	/*
 	   Validate checksum first. If it's invalid all other fields probably
@@ -234,7 +234,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_error("'%s' has invalid checksum (%#hx != %#hx)", buffer,
 				le16_to_cpu(actual_checksum), le16_to_cpu(meta1->checksum));
 		if (!EXFAT_REPAIR(invalid_node_checksum, ef, node))
-			ret = false;
+			ret = 0;
 	}
 
 	/*
@@ -249,7 +249,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_error("'%s' has valid size (%"PRIu64") greater than size "
 				"(%"PRIu64")", buffer, le64_to_cpu(meta2->valid_size),
 				node->size);
-		ret = false;
+		ret = 0;
 	}
 
 	/*
@@ -263,14 +263,14 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_get_name(node, buffer);
 		exfat_error("'%s' is empty but start cluster is %#x", buffer,
 				node->start_cluster);
-		ret = false;
+		ret = 0;
 	}
 	if (node->size > 0 && CLUSTER_INVALID(*ef->sb, node->start_cluster))
 	{
 		exfat_get_name(node, buffer);
 		exfat_error("'%s' points to invalid cluster %#x", buffer,
 				node->start_cluster);
-		ret = false;
+		ret = 0;
 	}
 
 	/* File or directory cannot be larger than clusters heap. */
@@ -279,7 +279,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_get_name(node, buffer);
 		exfat_error("'%s' is larger than clusters heap: %"PRIu64" > %"PRIu64,
 				buffer, node->size, clusters_heap_size);
-		ret = false;
+		ret = 0;
 	}
 
 	/* Empty file or directory must be marked as non-contiguous. */
@@ -288,7 +288,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_get_name(node, buffer);
 		exfat_error("'%s' is empty but marked as contiguous (%#hx)", buffer,
 				node->attrib);
-		ret = false;
+		ret = 0;
 	}
 
 	/* Directory size must be aligned on at cluster boundary. */
@@ -297,7 +297,7 @@ static bool check_node(const struct exfat* ef, struct exfat_node* node,
 		exfat_get_name(node, buffer);
 		exfat_error("'%s' directory size %"PRIu64" is not divisible by %d", buffer,
 				node->size, cluster_size);
-		ret = false;
+		ret = 0;
 	}
 
 	return ret;
@@ -597,7 +597,7 @@ int exfat_cache_directory(struct exfat* ef, struct exfat_node* dir)
 		return rc;
 	}
 
-	dir->is_cached = true;
+	dir->is_cached = 1;
 	return 0;
 }
 
@@ -636,7 +636,7 @@ static void reset_cache(struct exfat* ef, struct exfat_node* node)
 		tree_detach(p);
 		free(p);
 	}
-	node->is_cached = false;
+	node->is_cached = 0;
 	if (node->references != 0)
 	{
 		exfat_get_name(node, buffer);
@@ -735,7 +735,7 @@ int exfat_flush_node(struct exfat* ef, struct exfat_node* node)
 		return rc;
 	}
 
-	node->is_dirty = false; 
+	node->is_dirty = 0; 
 #ifdef WIN32
 	free(entries);
 #endif
@@ -828,7 +828,7 @@ static int shrink_directory(struct exfat* ef, struct exfat_node* dir,
 		new_size = CLUSTER_SIZE(*ef->sb);
 	if (new_size == dir->size)
 		return 0;
-	return exfat_truncate(ef, dir, new_size, true);
+	return exfat_truncate(ef, dir, new_size, 1);
 }
 
 static int delete(struct exfat* ef, struct exfat_node* node)
@@ -846,7 +846,7 @@ static int delete(struct exfat* ef, struct exfat_node* node)
 	}
 	tree_detach(node);
 	rc = shrink_directory(ef, parent, deleted_offset);
-	node->is_unlinked = true;
+	node->is_unlinked = 1;
 	if (rc != 0)
 	{
 		exfat_flush_node(ef, parent);
@@ -979,12 +979,12 @@ static int find_slot(struct exfat* ef, struct exfat_node* dir,
 	return exfat_truncate(ef, dir,
 		ROUND_UP(dir->size + sizeof(struct exfat_entry)*(n - contiguous),
 			CLUSTER_SIZE(*ef->sb)),
-		true);
+		1);
 #else
 	return exfat_truncate(ef, dir,
 			ROUND_UP(dir->size + sizeof(struct exfat_entry[n - contiguous]),
 					CLUSTER_SIZE(*ef->sb)),
-			true);
+			1);
 #endif
 }
 
@@ -1122,7 +1122,7 @@ int exfat_mkdir(struct exfat* ef, const char* path)
 	if (rc != 0)
 		return 0;
 	/* directories always have at least one cluster */
-	rc = exfat_truncate(ef, node, CLUSTER_SIZE(*ef->sb), true);
+	rc = exfat_truncate(ef, node, CLUSTER_SIZE(*ef->sb), 1);
 	if (rc != 0)
 	{
 		delete(ef, node);
@@ -1318,19 +1318,19 @@ void exfat_utimes(struct exfat_node* node, const struct timespec *tv)
 {
 	node->atime = tv[0].tv_sec;
 	node->mtime = tv[1].tv_sec;
-	node->is_dirty = true;
+	node->is_dirty = 1;
 }
 
 void exfat_update_atime(struct exfat_node* node)
 {
 	node->atime = time(NULL);
-	node->is_dirty = true;
+	node->is_dirty = 1;
 }
 
 void exfat_update_mtime(struct exfat_node* node)
 {
 	node->mtime = time(NULL);
-	node->is_dirty = true;
+	node->is_dirty = 1;
 }
 
 const char* exfat_get_label(struct exfat* ef)

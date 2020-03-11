@@ -88,7 +88,7 @@ static int get_int_option(const char* options, const char* option_name,
 	return strtol(p, NULL, base);
 }
 
-static bool match_option(const char* options, const char* option_name)
+static int match_option(const char* options, const char* option_name)
 {
 	const char* p;
 	size_t length = strlen(option_name);
@@ -96,8 +96,8 @@ static bool match_option(const char* options, const char* option_name)
 	for (p = strstr(options, option_name); p; p = strstr(p + 1, option_name))
 		if ((p == options || p[-1] == ',') &&
 				(p[length] == ',' || p[length] == '\0'))
-			return true;
-	return false;
+			return 1;
+	return 0;
 }
 
 static void parse_options(struct exfat* ef, const char* options)
@@ -129,7 +129,7 @@ static void parse_options(struct exfat* ef, const char* options)
 	}
 }
 
-static bool verify_vbr_checksum(const struct exfat* ef, void* sector)
+static int verify_vbr_checksum(const struct exfat* ef, void* sector)
 {
 	off_t sector_size = SECTOR_SIZE(*ef->sb);
 	uint32_t vbr_checksum;
@@ -138,7 +138,7 @@ static bool verify_vbr_checksum(const struct exfat* ef, void* sector)
 	if (exfat_pread(ef->dev, sector, sector_size, 0) < 0)
 	{
 		exfat_error("failed to read boot sector");
-		return false;
+		return 0;
 	}
 	vbr_checksum = exfat_vbr_start_checksum(sector, sector_size);
 	for (i = 1; i < 11; i++)
@@ -146,7 +146,7 @@ static bool verify_vbr_checksum(const struct exfat* ef, void* sector)
 		if (exfat_pread(ef->dev, sector, sector_size, i * sector_size) < 0)
 		{
 			exfat_error("failed to read VBR sector");
-			return false;
+			return 0;
 		}
 		vbr_checksum = exfat_vbr_add_checksum(sector, sector_size,
 				vbr_checksum);
@@ -154,7 +154,7 @@ static bool verify_vbr_checksum(const struct exfat* ef, void* sector)
 	if (exfat_pread(ef->dev, sector, sector_size, i * sector_size) < 0)
 	{
 		exfat_error("failed to read VBR checksum sector");
-		return false;
+		return 0;
 	}
 	for (i = 0; i < sector_size / sizeof(vbr_checksum); i++)
 		if (le32_to_cpu(((const le32_t*) sector)[i]) != vbr_checksum)
@@ -162,9 +162,9 @@ static bool verify_vbr_checksum(const struct exfat* ef, void* sector)
 			exfat_error("invalid VBR checksum 0x%x (expected 0x%x)",
 					le32_to_cpu(((const le32_t*) sector)[i]), vbr_checksum);
 			if (!EXFAT_REPAIR(invalid_vbr_checksum, ef, sector, vbr_checksum))
-				return false;
+				return 0;
 		}
-	return true;
+	return 1;
 }
 
 static int commit_super_block(const struct exfat* ef)

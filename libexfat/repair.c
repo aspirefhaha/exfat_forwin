@@ -28,19 +28,19 @@
 #endif
 int exfat_errors_fixed;
 
-bool exfat_ask_to_fix(const struct exfat* ef)
+int exfat_ask_to_fix(const struct exfat* ef)
 {
 	const char* question = "Fix (Y/N)?";
 	char answer[8];
-	bool yeah, nope;
+	int yeah, nope;
 
 	switch (ef->repair)
 	{
 	case EXFAT_REPAIR_NO:
-		return false;
+		return 0;
 	case EXFAT_REPAIR_YES:
 		printf("%s %s", question, "Y\n");
-		return true;
+		return 1;
 	case EXFAT_REPAIR_ASK:
 		do
 		{
@@ -64,7 +64,7 @@ bool exfat_ask_to_fix(const struct exfat* ef)
 	return true;
 }
 
-bool exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
+int exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
 		uint32_t vbr_checksum)
 {
 	size_t i;
@@ -75,23 +75,23 @@ bool exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
 	if (exfat_pwrite(ef->dev, sector, sector_size, 11 * sector_size) < 0)
 	{
 		exfat_error("failed to write correct VBR checksum");
-		return false;
+		return 0;
 	}
 	exfat_errors_fixed++;
-	return true;
+	return 1;
 }
 
-bool exfat_fix_invalid_node_checksum(UNUSED const struct exfat* ef,
+int exfat_fix_invalid_node_checksum(UNUSED const struct exfat* ef,
 		struct exfat_node* node)
 {
 	/* checksum will be rewritten by exfat_flush_node() */
-	node->is_dirty = true;
+	node->is_dirty = 1;
 
 	exfat_errors_fixed++;
-	return true;
+	return 1;
 }
 
-bool exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
+int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 		const struct exfat_entry* entry, off_t offset)
 {
 	struct exfat_entry deleted = *entry;
@@ -99,8 +99,8 @@ bool exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 	deleted.type &= ~EXFAT_ENTRY_VALID;
 	if (exfat_generic_pwrite(ef, dir, &deleted, sizeof(struct exfat_entry),
 			offset) != sizeof(struct exfat_entry))
-		return false;
+		return 0;
 
 	exfat_errors_fixed++;
-	return true;
+	return 1;
 }

@@ -153,7 +153,7 @@ extern "C++"
     // replacement (the differences won't matter in practice).
     typedef char __crt_bool;
 #else
-    typedef _Bool __crt_bool;
+    //typedef _Bool __crt_bool;
 #endif
 
 #define _ARGMAX   100

@@ -23,6 +23,9 @@
 #include <exfat.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef WIN32
+#include "config.h"
+#endif
 
 int main(int argc, char* argv[])
 {

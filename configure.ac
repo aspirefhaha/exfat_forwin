@@ -38,7 +38,7 @@ PKG_CHECK_MODULES([UBLIO], [libublio], [
   AC_DEFINE([USE_UBLIO], [1],
     [Define if block devices are not supported.])
 ], [:])
-#PKG_CHECK_MODULES([FUSE], [fuse])
+PKG_CHECK_MODULES([FUSE], [fuse])
 case "$host_os" in
   *-gnu)
     AC_DEFINE([_XOPEN_SOURCE], [500], [Enable pread() and pwrite().])

@@ -20,6 +20,14 @@ On Windows
  * Use Visual Studio 2010/2015/2017
  * open win.sln
  * build libexfat -> getopt -> dumpexfat -> mkfs
+ * project extfatDlg is a project for manage files and directories in tree view
+	* gui compile with qt,if you dont have qt env ,just remove this project
+	* qm file generated from lupdate and lrelease
+	```
+	lupdate -pro exfatDlg.pro
+	edit zh_CN.ts
+	lrelease zh_CN.ts
+	```
 
 To build this project on GNU/Linux you need to install the following packages:
 

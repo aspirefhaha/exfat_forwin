@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/exfatDlg"/>
+    <qresource prefix="/qm">
+        <file>zh_CN.qm</file>
+    </qresource>
+</RCC>

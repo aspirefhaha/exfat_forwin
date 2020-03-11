@@ -40,9 +40,11 @@
 #if _MSC_VER >= 1900
 #pragma comment(lib,"legacy_stdio_definitions.lib")
 FILE __iob_func[3] = { NULL,NULL,NULL };
-#endif
-#endif
 #include <inttypes.h>
+#else
+#include "../win/libexfat/inttypes.h"
+#endif
+#endif
 #include <stdio.h>
 #include <string.h>
 

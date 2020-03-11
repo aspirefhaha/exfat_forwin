@@ -23,7 +23,15 @@
 #include "exfat.h"
 #include <string.h>
 #include <errno.h>
+#if defined(WIN32)
+#if  _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
+#else
+#include <inttypes.h>
+#endif
 
 int exfat_opendir(struct exfat* ef, struct exfat_node* dir,
 		struct exfat_iterator* it)

@@ -23,7 +23,15 @@
 #include "exfat.h"
 #include <errno.h>
 #include <string.h>
+#if defined(WIN32)
+#if  _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
+#else
+#include <inttypes.h>
+#endif
 
 /*
  * Sector to absolute offset.

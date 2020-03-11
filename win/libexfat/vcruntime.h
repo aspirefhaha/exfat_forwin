@@ -95,10 +95,10 @@ _CRT_BEGIN_C_HEADER
 
 
 #define _CRT_STRINGIZE_(x) #x
-#define _CRT_STRINGIZE(x) _CRT_STRINGIZE_(x)
+//#define _CRT_STRINGIZE(x) _CRT_STRINGIZE_(x)
 
 #define _CRT_WIDE_(s) L ## s
-#define _CRT_WIDE(s) _CRT_WIDE_(s)
+//#define _CRT_WIDE(s) _CRT_WIDE_(s)
 
 #define _CRT_CONCATENATE_(a, b) a ## b
 #define _CRT_CONCATENATE(a, b)  _CRT_CONCATENATE_(a, b)
@@ -139,7 +139,7 @@ _CRT_BEGIN_C_HEADER
     #define __CLRCALL_PURE_OR_CDECL __cdecl
 #endif
 
-#define __CRTDECL __CLRCALL_PURE_OR_CDECL
+//#define __CRTDECL __CLRCALL_PURE_OR_CDECL
 
 // Definitions of common __declspecs
 #define _VCRT_NOALIAS __declspec(noalias)

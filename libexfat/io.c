@@ -50,6 +50,7 @@
 #endif
 
 #ifdef WIN32
+//TODO need change to USB Flash
 int fsync(int fd) 
 {
 	//sync();

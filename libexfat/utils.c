@@ -23,7 +23,15 @@
 #include "exfat.h"
 #include <string.h>
 #include <stdio.h>
+#if defined(WIN32)
+#if  _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
 #include <inttypes.h>
+#endif
+#else
+#include <inttypes.h>
+#endif
 
 void exfat_stat(const struct exfat* ef, const struct exfat_node* node,
 		struct stat* stbuf)

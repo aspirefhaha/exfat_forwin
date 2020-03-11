@@ -1,15 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "win", "win\win.vcxproj", "{F898C630-98B6-436E-BED9-3DB69CA29EF8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libexfat", "win\libexfat\libexfat.vcxproj", "{14777E61-96D3-4879-B2F2-149B4F284D7D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dumpexfat", "win\dumpexfat\dumpexfat.vcxproj", "{AF284063-1056-4129-B7C6-0F964848B1DA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{14777E61-96D3-4879-B2F2-149B4F284D7D} = {14777E61-96D3-4879-B2F2-149B4F284D7D}
+		{A2169BC8-CF99-40BF-83F3-B0E38F7067BD} = {A2169BC8-CF99-40BF-83F3-B0E38F7067BD}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mkfs", "win\mkfs\mkfs.vcxproj", "{8F926870-3A4D-4AD1-9CE5-406188CE5498}"
+	ProjectSection(ProjectDependencies) = postProject
+		{14777E61-96D3-4879-B2F2-149B4F284D7D} = {14777E61-96D3-4879-B2F2-149B4F284D7D}
+		{A2169BC8-CF99-40BF-83F3-B0E38F7067BD} = {A2169BC8-CF99-40BF-83F3-B0E38F7067BD}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getopt", "win\getopt\src\getopt.vcxproj", "{A2169BC8-CF99-40BF-83F3-B0E38F7067BD}"
 EndProject

@@ -24,10 +24,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <inttypes.h>
 
 #ifndef WIN32
+#include <inttypes.h>
 #include <unistd.h>
+#else
+#if _MSC_VER < 1900
+#include "../win/libexfat/inttypes.h"
+#else
+#include <inttypes.h>
+#endif
 #endif
 #include <sys/types.h>
 

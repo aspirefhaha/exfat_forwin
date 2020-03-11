@@ -29,6 +29,7 @@
 #include <exfat.h>
 #include <sys/types.h>
 #ifndef WIN32
+#include "config.h"
 #include <sys/time.h>
 #include <unistd.h>
 #else
@@ -248,9 +249,12 @@ int main(int argc, char* argv[])
 	uint32_t volume_serial = 0;
 	uint64_t first_sector = 0;
 	struct exfat_dev* dev;
-
+#ifdef WIN32
 	printf("mkexfatfs %s\n", "win_1.0");
+#else
 
+	printf("mkexfatfs %s\n", VERSION);
+#endif
 	while ((opt = getopt(argc, argv, "i:n:p:s:V")) != -1)
 	{
 		switch (opt)

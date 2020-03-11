@@ -73,20 +73,20 @@ static int cbm_write(struct exfat_dev* dev)
 	free(bitmap);
 	return 0;
 }
-#ifdef WIN32
-#if _MSC_VER < 1900
-const struct fs_object cbm =
-{
-	cbm_alignment,
-	cbm_size,
-	cbm_write,
-};
+#if defined(WIN32) && _MSC_VER < 1900
+	
+	const struct fs_object cbm =
+	{
+		cbm_alignment,
+		cbm_size,
+		cbm_write,
+	};
 #else
-const struct fs_object cbm =
-{
-	.get_alignment = cbm_alignment,
-	.get_size = cbm_size,
-	.write = cbm_write,
-};
-#endif
+	const struct fs_object cbm =
+	{
+		.get_alignment = cbm_alignment,
+		.get_size = cbm_size,
+		.write = cbm_write,
+	};
+	
 #endif

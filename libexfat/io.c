@@ -21,7 +21,8 @@
 */
 
 #include "exfat.h"
-#if _MSC_VER < 1900
+
+#if defined(WIN32) && _MSC_VER < 1900
 #include "../win/libexfat/inttypes.h"
 #else
 #include <inttypes.h>

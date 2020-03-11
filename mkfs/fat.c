@@ -81,8 +81,7 @@ static int fat_write(struct exfat_dev* dev)
 
 	return 0;
 }
-#ifdef WIN32
-#if _MSC_VER < 1900
+#if defined(WIN32) && _MSC_VER < 1900
 const struct fs_object fat =
 {
 	fat_alignment,
@@ -96,5 +95,4 @@ const struct fs_object fat =
 	.get_size = fat_size,
 	.write = fat_write,
 };
-#endif
 #endif

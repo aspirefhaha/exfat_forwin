@@ -136,8 +136,10 @@ struct exfat
 	char label[EXFAT_UTF8_ENAME_BUFFER_MAX];
 	void* zero_cluster;
 	int dmask, fmask;
-	//uid_t uid;
-	//gid_t gid;
+#ifndef WIN32
+	uid_t uid;
+	gid_t gid;
+#endif
 	int ro;
 	bool noatime;
 	enum { EXFAT_REPAIR_NO, EXFAT_REPAIR_ASK, EXFAT_REPAIR_YES } repair;

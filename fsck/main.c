@@ -25,6 +25,9 @@
 #include <string.h>
 #include <inttypes.h>
 #include <unistd.h>
+#ifndef WIN32
+#include "config.h"
+#endif
 
 #define exfat_debug(format, ...)
 

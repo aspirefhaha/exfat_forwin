@@ -23,28 +23,28 @@
 #include <exfat.h>
 #include <fcntl.h>
 #ifndef WIN32
-#include <unistd.h>
+	#include <unistd.h>
+	#include <inttypes.h>
 #else
-#include <getopt.h>
-#include <stdio.h>
+	#include <getopt.h>
+	#include <stdio.h>
 
-#pragma comment(lib,"libexfat.lib")
+	#pragma comment(lib,"libexfat.lib")
 
-#ifdef _DEBUG
-#pragma comment(lib,"getoptd.lib")
-#else
-#pragma comment(lib,"getopt.lib")
+	#ifdef _DEBUG
+		#pragma comment(lib,"getoptd.lib")
+	#else
+		#pragma comment(lib,"getopt.lib")
+	#endif
+	#if _MSC_VER >= 1900
+		#pragma comment(lib,"legacy_stdio_definitions.lib")
+		FILE __iob_func[3] = { NULL,NULL,NULL };
+		#include <inttypes.h>
+	#else
+		#include "../win/libexfat/inttypes.h"
+	#endif
 #endif
 
-//FILE __iob_func[3] = { *stdin,*stdout,*stderr }; 
-#if _MSC_VER >= 1900
-#pragma comment(lib,"legacy_stdio_definitions.lib")
-FILE __iob_func[3] = { NULL,NULL,NULL };
-#include <inttypes.h>
-#else
-#include "../win/libexfat/inttypes.h"
-#endif
-#endif
 #include <stdio.h>
 #include <string.h>
 

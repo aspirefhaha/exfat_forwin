@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <unistd.h>
+#include "config.h"
 
 #ifndef DEBUG
 	#define exfat_debug(format, ...)

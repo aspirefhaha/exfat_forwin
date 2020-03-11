@@ -43,8 +43,7 @@ static int uct_write(struct exfat_dev* dev)
 	}
 	return 0;
 }
-#ifdef WIN32
-#if _MSC_VER < 1900
+#if defined(WIN32) && _MSC_VER < 1900
 const struct fs_object uct =
 {
 	uct_alignment,
@@ -58,5 +57,4 @@ const struct fs_object uct =
 	.get_size = uct_size,
 	.write = uct_write,
 };
-#endif
 #endif

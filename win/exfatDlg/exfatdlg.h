@@ -1,10 +1,10 @@
 #ifndef EXFATDLG_H
 #define EXFATDLG_H
 
+#include "exfatModel.h"
 #include <QtGui/QMainWindow>
 #include <QtGui>
 #include "ui_exfatdlg.h"
-#include "exfatModel.h"
 
 class exfatDlg : public QMainWindow
 {

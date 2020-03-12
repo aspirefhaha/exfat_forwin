@@ -26,7 +26,9 @@
 
 #ifndef ANDROID
 /* Android.bp is used instead of autotools when targeting Android */
-//#include "config.h"
+#ifndef WIN32
+#include "config.h"
+#endif
 #endif
 #include "compiler.h"
 #include "exfatfs.h"

@@ -1,10 +1,7 @@
 #ifdef UNICODE
 #undef UNICODE
 #endif
-#define __bool_true_false_are_defined 1
-extern "C"{
-#include "exfat.h"
-}
+
 #include "exfatModel.h"
 #include <qimage.h>
 #include <qdir.h>
@@ -44,12 +41,20 @@ ExfatModel::ExfatModel(QObject *parent)
 
 ExfatModel::~ExfatModel()
 {
-	
+	for(int i = 0; i < m_rootDrives.count(); i++)
+	{
+		ExfatFSPrivate * rootItem = m_rootDrives.at(i);
+		if(rootItem->m_pexfatRoot){
+			//TODO
+			exfat_unmount(rootItem->m_pexfatRoot);
+			free(rootItem->m_pexfatRoot);
+		}
+	}
 	qDeleteAll(m_allItems);
 }
 
-ExfatFSPrivae * ExfatModel::findOutFSChild(QString abspath,EXFATITEMTYPE type) const{
-	QList<ExfatFSPrivae *>::const_iterator pitem= m_allItems.begin();
+ExfatFSPrivate * ExfatModel::findOutFSChild(QString abspath,EXFATITEMTYPE type) const{
+	QList<ExfatFSPrivate *>::const_iterator pitem= m_allItems.begin();
 	while(pitem != m_allItems.end()){
 		if((*pitem)->match(abspath,type)){
 			return *pitem;
@@ -481,96 +486,119 @@ QModelIndex ExfatModel::index(int row, int column,
         // 其它层节点绑定关系
         if (parent.internalPointer() != nullptr)
         {
-            ExfatFSPrivae * parentItemPtr = static_cast<ExfatFSPrivae *>(parent.internalPointer());
-			/*if(selItemPtr == NULL){
-				selItemPtr = m_rootDrives.at(row);
-			}*/
+            ExfatFSPrivate * parentItemPtr = static_cast<ExfatFSPrivate *>(parent.internalPointer());
+			
 			QString childPath ;
-			EXFATITEMTYPE childType = OUTFTUNKNOWN;
+			EXFATITEMTYPE childType = EXFTUNKNOWN;
 			switch(parentItemPtr->fstype){
-			case OUTFTDRIVE:
-			case OUTFTDIR:
+			case EXFTDRIVE:
 				{
 					//根据路径，row行数,返回绝对路径和类型
-					//childType = InEnvDirPlugin::GetFileInfoInDir(parentItemPtr->absPath,row,childPath);
 					char lpPath[MAX_PATH] = {0};
-					int len = 0;
-					strcpy(lpPath,parentItemPtr->absPath.toStdString().c_str());
-					len = strlen(lpPath);
-					if(lpPath[len-1]!='/'){
-						lpPath[len]='/';
-						lpPath[len+1]=0;
-					}
-
-					//BOOL tmpRet = pFunc->SetCurrentDirectory((LPCTSTR)lpPath);
-					//if(!tmpRet){
-					//	return QModelIndex();
-					//}
-
-					WIN32_FIND_DATA fd;
-					//long long hFindFile = pFunc->FindFirstFile("*",&fd);
-					//if(hFindFile == -1 || hFindFile == 0){
-						//pFunc->CloseHandle(hFindFile);
-						//return QModelIndex();
-					//}
-					//else{
-						bool isFinished = false;
-						BOOL bIsDirectory = FALSE;
-						int idx = 0;
-						while(!isFinished){
-							//strcpy(tempPath, lpPath);  
-							//if(lpPath[len-1] != '/') strcat(tempPath, "/");  
-							//strcat(tempPath, fd.cFileName);  
-							bIsDirectory = ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);  
-              
-							//如果是.或..  
-							if( bIsDirectory  
-								&& (strcmp(fd.cFileName, ".")==0 || strcmp(fd.cFileName, "..")==0))   
-							{         
-#if 0
-								isFinished = (pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-#endif
-								continue;  
-							} 
-							if(((fd.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) || (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) && (fd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == 0 && (fd.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)==0 ){
-								if(idx == row){ //find one
-									if(bIsDirectory){
-										childType = OUTFTDIR;
-									}
-									else
-										childType = OUTFTFILE;
-									childPath = parentItemPtr->absPath + "/" + fd.cFileName;
-									isFinished = TRUE;
-									continue;
+					struct exfat * ef = parentItemPtr->m_pexfatRoot;
+					struct exfat_node * pparentnode = exfat_get_node(ef->root);
+					struct exfat_node * node = NULL;
+					int rc =  0;
+					int searchidx = 0;
+					if(pparentnode != NULL){
+						struct exfat_iterator it;
+						rc = exfat_opendir(ef, pparentnode, &it);
+						if (rc != 0)
+							break;
+						while ((node = exfat_readdir(&it)))
+						{
+							if(row == searchidx){
+								if(node->attrib & EXFAT_ATTRIB_DIR){
+									childType = EXFTDIR;
+									
 								}
-								idx++;
+								else {
+									childType = EXFTFILE;
+								}
+								int len = lstrlenW((LPCWSTR)&node->name);
+								childPath = QString("/") +QString::fromUtf16((const  unsigned short *)&node->name,len);
 
+								exfat_put_node(ef, node);
+								break;
 							}
-#if 0
-							isFinished = (pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-
-#endif
-						}  
-#if 0
-						pFunc->FindClose(hFindFile);  
-#endif
-					//}
-					if(childType != OUTFTUNKNOWN){
-						ExfatFSPrivae * pFind = NULL;
-						pFind = findOutFSChild(childPath,childType);
-						if(pFind == NULL){
-							pFind = new ExfatFSPrivae(childPath,childType,row,column,parentItemPtr);
-							(const_cast<ExfatModel*>(this))->m_allItems.append(pFind);
+							exfat_put_node(ef, node);
+							searchidx++;
 						}
-						return createIndex(row,column,pFind);
+						exfat_closedir(ef, &it);
+						exfat_put_node(ef,pparentnode);
+						if(childType != EXFTUNKNOWN){
+							ExfatFSPrivate * pFind = NULL;
+							pFind = findOutFSChild(childPath,childType);
+							if(pFind == NULL){
+								pFind = new ExfatFSPrivate(childPath,childType,row,column,parentItemPtr);
+								(const_cast<ExfatModel*>(this))->m_allItems.append(pFind);
+							}
+							return createIndex(row,column,pFind);
+						}
+
 					}
+
+					
 
 				}
 				break;
-			case OUTFTFILE:
+			case EXFTDIR:
 				{
-					//QFileInfo info(parentItemPtr->first);
-					//return createIndex(row,column,new QPair<QString,EXFATITEMTYPE>(info.absoluteFilePath(),OUTFTFILE));
+					//根据路径，row行数,返回绝对路径和类型
+					char lpPath[MAX_PATH] = {0};
+					int len = 0;
+					struct exfat_node * pparentnode = NULL;
+					struct exfat * ef = parentItemPtr->m_pexfatRoot;
+					struct exfat_node * node = NULL;
+					int rc = 0;
+					int searchidx = 0;
+					exfat_utf16_to_utf8(lpPath,(const le16_t *)parentItemPtr->absPath.data(),MAX_PATH,parentItemPtr->absPath.length());
+					rc = exfat_lookup(ef,&pparentnode,lpPath);
+					
+					if(rc == 0){
+						struct exfat_iterator it;
+						rc = exfat_opendir(ef, pparentnode, &it);
+						if (rc != 0)
+							break;
+						while ((node = exfat_readdir(&it)))
+						{
+							if(row == searchidx){
+								int len = lstrlenW((LPCWSTR)&node->name);
+								QString filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
+								if(node->attrib & EXFAT_ATTRIB_DIR){
+									childType = EXFTDIR;
+								}
+								else 
+									childType = EXFTFILE;
+
+								childPath = parentItemPtr->absPath + "/" + filename ;//+ 
+
+								exfat_put_node(ef, node);
+								break;
+							}
+							exfat_put_node(ef, node);
+							searchidx++;
+						}
+						exfat_closedir(ef, &it);
+						exfat_put_node(ef,pparentnode);
+						if(childType != EXFTUNKNOWN){
+							ExfatFSPrivate * pFind = NULL;
+							pFind = findOutFSChild(childPath,childType);
+							if(pFind == NULL){
+								pFind = new ExfatFSPrivate(childPath,childType,row,column,parentItemPtr);
+								(const_cast<ExfatModel*>(this))->m_allItems.append(pFind);
+							}
+							return createIndex(row,column,pFind);
+						}
+
+					}
+
+					
+
+				}
+				break;
+			case EXFTFILE:
+				{
 					return QModelIndex();
 				}
 				break;
@@ -658,25 +686,24 @@ QVariant ExfatModel::data(const QModelIndex & index,
 			return int(Qt::AlignLeft| Qt::AlignVCenter);
     }
 	
-	//qDebug() << "data role " << role << " row " << index.row() << " column " << index.column() ;
 	if(role == Qt::DecorationRole && index.column() == 0){
-		ExfatFSPrivae * selPtr = static_cast<ExfatFSPrivae *>(index.internalPointer()); 
+		ExfatFSPrivate * selPtr = static_cast<ExfatFSPrivate *>(index.internalPointer()); 
 		EXFATITEMTYPE fstype = selPtr->fstype;
 		QFileIconProvider icon_provider;
 		switch(fstype){
-		case OUTFTFILE:
+		case EXFTFILE:
 			{
 				QIcon icon = icon_provider.icon(QFileIconProvider::File);
 				return QVariant(icon);
 			}
 			break;
-		case OUTFTDRIVE:
+		case EXFTDRIVE:
 			{
 				QIcon icon = icon_provider.icon(QFileIconProvider::Drive);
 				return QVariant(icon);
 			}
 			break;
-		case OUTFTDIR:
+		case EXFTDIR:
 			{
 				QIcon icon = icon_provider.icon(QFileIconProvider::Folder);
 				return QVariant(icon);
@@ -687,95 +714,43 @@ QVariant ExfatModel::data(const QModelIndex & index,
     if(role == Qt::DisplayRole)
     {
 		//int rowcount = index.row();
-		ExfatFSPrivae * selPtr = static_cast<ExfatFSPrivae *>(index.internalPointer()); 
+		ExfatFSPrivate * selPtr = static_cast<ExfatFSPrivate *>(index.internalPointer()); 
 		EXFATITEMTYPE fstype = selPtr->fstype;
 		QString fspath = selPtr->absPath;
 		//qDebug() << "want display " << fspath << " type" << fstype << " row " << index.row() << " column " << index.column() << " parent" << index.parent();
 		switch(fstype){
-		case OUTFTDIR:
-		case OUTFTFILE:
+		case EXFTDIR:
+		case EXFTFILE:
 			{
 				//获取fspath文件的文件名、大小、类型、最后修改时间
-#if 1
-				QString filename ;
-				QString filesize ;
-				QString filetype ;
-				QString filelastmodifytime ;
-				//InEnvGetOutFileInfo(fspath,filename,filesize,filetype,filelastmodifytime);
-				char lpPath[MAX_PATH] = {0};
-				int len = 0;
-				strcpy(lpPath,fspath.toStdString().c_str());
-				WIN32_FILE_ATTRIBUTE_DATA wfad;
-				char * pos = strrchr(lpPath,'/');
-#define TRANSUTF8 0
-				char * pUtf8 = lpPath;
-				if(pos != NULL){
 
-#if TRANSUTF8
-					pUtf8 = GBKToUTF8(pos+1);
-#else
-					pUtf8=pos+1;
-#endif
-				}
-				else{
-#if TRANSUTF8
-					pUtf8 = GBKToUTF8(lpPath);
-#endif
-				}
-				filename =  QString::fromLocal8Bit(pUtf8);
-#if TRANSUTF8
-				delete[] pUtf8;
-#endif
-#if 0
-				BOOL tmpRet = pFunc->GetFileAttributesEx((char*)lpPath,GetFileExInfoStandard,&wfad);
-				if(tmpRet){
-					
-					if(wfad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY){
-						filetype = "File Folder";
-						
-						//filename = "中文";
+				QString filename = selPtr->absPath;
+				struct exfat_node * node;
+				QString filesize = "0";
+				QString filetype = tr("File");
+				QString filelastmodifytime = "1980-01-01 00::00::00";
+				char utf8str[MAX_PATH]={0};
+				exfat_utf16_to_utf8(utf8str,(const le16_t *)fspath.data(),MAX_PATH,fspath.length());
+				int rc = exfat_lookup(selPtr->m_pexfatRoot,&node,(const char *)&utf8str);
+				do{
+					if(rc ==0){
+						char utf8str[MAX_PATH]={0};
+						int len = 0;
+						if(node->attrib & EXFAT_ATTRIB_DIR){
+							filetype=tr("Dir");
+							filesize = covertHumanString(node->size);
+						}
+						else{
+							//struct stat tmpstat;
+							//exfat_stat(selPtr->m_pexfatRoot,node,&tmpstat);
+							filesize = covertHumanString(node->size);
+							
+						}
+						filelastmodifytime = QDateTime::fromTime_t(node->mtime).toString("yyyy-MM-dd hh::mm::ss");
+						len = lstrlenW((LPCWSTR)&node->name);
+						filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
 					}
-					else{
-						//filename = GBKToUTF8("中文");
-						filetype = "File";
-						//
-						//pUtf8 = GBKToUTF8(pos+1);
-						//delete[] pUtf8 ;
-
-						//long long tH = pFunc->CreateFile((char *)lpPath,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_FLAG_RANDOM_ACCESS,NULL);
-						//if(tH != -1 && tH != 0){
-						//	BY_HANDLE_FILE_INFORMATION bhfi;
-						//	pFunc->GetFileInformationByHandle(tH,&bhfi);
-						//
-						//	filesize = QString::number(bhfi.nFileSizeHigh * 2ll^32  + bhfi.nFileSizeLow);	
-						//}
-
-					}
-					filesize = QString::number(wfad.nFileSizeHigh * 2ll^32  + wfad.nFileSizeLow);
-					SYSTEMTIME sysTime;
-					FileTimeToSystemTime(&wfad.ftLastWriteTime,&sysTime);
-					filelastmodifytime = QString("%1-%2-%3 %4::%5::%6").arg(sysTime.wYear,4,10,QLatin1Char('0'))
-						.arg(sysTime.wMonth,2,10,QLatin1Char('0'))
-						.arg(sysTime.wDay,2,10,QLatin1Char('0'))
-						.arg(sysTime.wHour,2,10,QLatin1Char('0'))
-						.arg(sysTime.wMinute,2,10,QLatin1Char('0'))
-						.arg(sysTime.wSecond,2,10,QLatin1Char('0'));
-				}
-				else{
-					//char tmpretstr[256]={0};
-					//sprintf(tmpretstr,"GetFileAttributes ret %d %s\n",tmpRet,lpPath);
-					//OutputDebugString(tmpretstr);
-					
-				}
-#endif	
-
-#else
-				QFileInfo info(fspath);
-				QString filename = info.fileName();
-				QString filesize = info.isDir()?"":QString::number(info.size());
-				QString filetype = info.isFile()?tr("File"):tr("File Folder");
-				QString filelastmodifytime = info.lastModified().toString("yyyy-MM-dd hh::mm::ss");
-#endif
+				}while(0);
 				switch(index.column()){
 				case 0:
 					return QVariant(filename);
@@ -795,47 +770,17 @@ QVariant ExfatModel::data(const QModelIndex & index,
 				}
 			}
 			break;
-		case OUTFTDRIVE:
+		case EXFTDRIVE:
 			{
-#if 1
-				QString filename ;
-				QString filesize ;
-				QString filetype = "Drive";
-				QString filelastmodifytime ="";
-				//InEnvGetOutDriveInfo(fspath,filename,filesize,filetype,filelastmodifytime);
-				char lpPath[MAX_PATH] = {0};
-				//char tempPath[MAX_PATH] ={0};
-				int len = 0;
-				strcpy(lpPath,fspath.toStdString().c_str());
-				len = strlen(lpPath);
-				if(lpPath[len-1]!='/'){
-					lpPath[len]='/';
-					lpPath[len+1]=0;
+				//QFileInfo info(fspath);
+				QString filename = selPtr->m_pexfatRoot->label;
+				QString filesize = "0";
+				if(isRootItem(selPtr)){
+					qlonglong tmpsize = (qlonglong)(selPtr->m_pexfatRoot->sb->cluster_count.__u32);
+					filesize = covertHumanString( tmpsize << (selPtr->m_pexfatRoot->sb->spc_bits + selPtr->m_pexfatRoot->sb->sector_bits));
 				}
-				filename = lpPath;
-				DWORD64 qwFreeBytesToCaller, qwTotalBytes, qwFreeBytes;
-				DWORD dwSectPerClust, dwBytesPerSect, dwFreeClusters, dwTotalClusters;
-				BOOL bResult = 0;
-#if 0
-				//使用GetDiskFreeSpaceEx获取磁盘信息并打印结果
-				bResult = pFunc->GetDiskFreeSpaceEx (lpPath,
-					(PULARGE_INTEGER)&qwFreeBytesToCaller,
-					(PULARGE_INTEGER)&qwTotalBytes,
-					(PULARGE_INTEGER)&qwFreeBytes);
-#endif
-				if(bResult)
-					filesize = QString::number(qwFreeBytesToCaller);
-					//printf("空闲空间（字节）: \t\t%I64d\n", qwFreeBytes);
-					//printf("磁盘总容量（字节）: \t\t%I64d\n", qwTotalBytes);
-				else
-					filesize = "0";
-#else
-				QFileInfo info(fspath);
-				QString filename = info.absoluteFilePath();
-				QString filesize = "";
-				QString filetype = "Drive";
-				QString filelastmodifytime = info.lastModified().toString("yyyy-MM-dd hh::mm::ss");
-#endif
+				QString filetype = tr("Drive");
+				QString filelastmodifytime = "";
 				switch(index.column()){
 				case 0:
 					return QVariant(filename);
@@ -872,7 +817,7 @@ QModelIndex ExfatModel::parent(const QModelIndex &child) const
 		return QModelIndex();
 	}
 
-	ExfatFSPrivae* childData = static_cast<ExfatFSPrivae*>(child.internalPointer());
+	ExfatFSPrivate* childData = static_cast<ExfatFSPrivate*>(child.internalPointer());
 	for(int i = 0; i < m_rootDrives.count(); i++)
 	{
 		if(m_rootDrives[i] == childData) //* 如果是父节点（分组）则返回无效父节点（分组没有父节点）
@@ -882,7 +827,7 @@ QModelIndex ExfatModel::parent(const QModelIndex &child) const
 		}
 	}
 	for(int i = 0; i<m_allItems.count();i++){
-		ExfatFSPrivae* item = m_allItems[i];
+		ExfatFSPrivate* item = m_allItems[i];
 		if(item == childData){
 			if(item->m_pParent != NULL){
 				//qDebug() << "find parent " << item->m_pParent;
@@ -898,6 +843,15 @@ QModelIndex ExfatModel::parent(const QModelIndex &child) const
 
 void ExfatModel::refreshRootDevice()
 {
+	for(int i = 0; i < m_rootDrives.count(); i++)
+	{
+		ExfatFSPrivate * rootItem = m_rootDrives.at(i);
+		if(rootItem->m_pexfatRoot){
+			//TODO
+			exfat_unmount(rootItem->m_pexfatRoot);
+			free(rootItem->m_pexfatRoot);
+		}
+	}
 	m_rootDrives.clear();
 #if 0
 	if(pFunc){
@@ -913,7 +867,7 @@ void ExfatModel::refreshRootDevice()
 				case DRIVE_NO_ROOT_DIR:
 					{
 						QString tmpDvName = (char *)tmpDv;
-						addRootDevice(tmpDvName,OUTFTDRIVE);
+						addRootDevice(tmpDvName,EXFTDRIVE);
 					}
 					break;
 				default:
@@ -927,10 +881,25 @@ void ExfatModel::refreshRootDevice()
 #endif
 }
 
+BOOL ExfatModel::isRootItem(ExfatFSPrivate * priv) const
+{
+	BOOL isrootitem = FALSE;
+	QList<ExfatFSPrivate*>::const_iterator litem = m_rootDrives.begin();
+	while(litem != m_rootDrives.end()){
+		if((*litem)->match(priv->absPath, priv->fstype)){
+			isrootitem = TRUE;
+			break;
+		}
+		litem++;
+	}
+	return isrootitem;
+}
+
+
 void ExfatModel::addRootDevice(QString devname,EXFATITEMTYPE fstype)
 {
 	bool alreadyHas = false;
-	QList<ExfatFSPrivae*>::iterator litem = m_rootDrives.begin();
+	QList<ExfatFSPrivate*>::iterator litem = m_rootDrives.begin();
 	while(litem != m_rootDrives.end()){
 		if((*litem)->match(devname, fstype)){
 			alreadyHas = true;
@@ -939,9 +908,14 @@ void ExfatModel::addRootDevice(QString devname,EXFATITEMTYPE fstype)
 		litem++;
 	}
 	if(!alreadyHas){
-		ExfatFSPrivae * newItem = new ExfatFSPrivae(devname,fstype,m_rootDrives.size(),0,NULL);
-		this->m_rootDrives.append(newItem);
-		this->m_allItems.append(newItem);
+		struct exfat * ef = (struct exfat * )malloc(sizeof(struct exfat));
+		int mount_ret =  exfat_mount(ef, devname.toStdString().c_str(), "rw");
+		if(mount_ret ==0){
+			ExfatFSPrivate * newItem = new ExfatFSPrivate(devname,fstype,m_rootDrives.size(),0,NULL);
+			newItem->m_pexfatRoot = ef;
+			this->m_rootDrives.append(newItem);
+			this->m_allItems.append(newItem);
+		}
 	}
 }
 
@@ -951,65 +925,62 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 		return m_rootDrives.size();
 	}
 	else{
-		ExfatFSPrivae * parentData = static_cast<ExfatFSPrivae*>(parent.internalPointer());
+		ExfatFSPrivate * parentData = static_cast<ExfatFSPrivate*>(parent.internalPointer());
 		switch(parentData->fstype ){
-		case OUTFTDRIVE:
-		case OUTFTDIR:
+		case EXFTDRIVE:
+			{
+				int listsize = 0;
+				int rc;
+				struct exfat * ef = parentData->m_pexfatRoot;
+				struct exfat_node * prootdir  = exfat_get_node(ef->root);
+				struct exfat_node* node;
+				do{
+					struct exfat_iterator it;
+					rc = exfat_opendir(ef, prootdir, &it);
+					if (rc != 0)
+						break;
+					while ((node = exfat_readdir(&it)))
+					{
+						listsize++;
+						exfat_put_node(ef, node);
+					}
+					exfat_closedir(ef, &it);
+				}while(0);
+				exfat_put_node(ef,prootdir);
+				return listsize;
+			}
+		case EXFTDIR:
 			{
 				//根据输入的目录绝对地址，获取下级文件和文件夹的数量
 				int listsize = 0;
-				//listsize = InEnvDirPlugin::GetSubItemCount(parentData->absPath);
-				char lpPath[MAX_PATH] = {0};
-				//char tempPath[MAX_PATH] ={0};
-				int len = 0;
-				strcpy(lpPath,parentData->absPath.toStdString().c_str());
-				len = strlen(lpPath);
-				if(lpPath[len-1]!='/'){
-					lpPath[len]='/';
-					lpPath[len+1]=0;
-				}
-#if 0
-				BOOL tmpRet  = pFunc->SetCurrentDirectory((LPCTSTR)lpPath);
-				if(!tmpRet){
+				int rc;
+				struct exfat * ef = parentData->m_pexfatRoot;
+				struct exfat_node * pdir ;
+				char utf8str[MAX_PATH]={0};
+				exfat_utf16_to_utf8(utf8str,(const le16_t *)parentData->absPath.data(),MAX_PATH,parentData->absPath.length());
+				rc = exfat_lookup(ef,&pdir,utf8str);
+				if(rc!=0)
 					return 0;
-				}
-				WIN32_FIND_DATA fd;
-				long long hFindFile = pFunc->FindFirstFile("*",&fd);
-				if(hFindFile == -1 || hFindFile == 0){
-					pFunc->CloseHandle(hFindFile);
-					listsize = 0;
-				}
-				else{
-					bool isFinished = false;
-					BOOL bIsDirectory = FALSE;
-					while(!isFinished){
-						//strcpy(tempPath, lpPath);  
-						//if(lpPath[len-1] != '/') strcat(tempPath, "/");  
-						//strcat(tempPath, fd.cFileName);  
-						bIsDirectory = ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);  
-              
-						//如果是.或..  
-						if( bIsDirectory  
-							&& (strcmp(fd.cFileName, ".")==0 || strcmp(fd.cFileName, "..")==0))   
-						{         
-							isFinished = (pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-							continue;  
-						}  
-						if(((fd.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) || (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) && (fd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == 0 && (fd.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)==0 ){
-							
-							listsize++;
-						}
-						isFinished = (pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-					}  
-					pFunc->FindClose(hFindFile);  
-				}
+				struct exfat_node* node;
+				do{
+					struct exfat_iterator it;
+					rc = exfat_opendir(ef, pdir, &it);
+					if (rc != 0)
+						break;
+					while ((node = exfat_readdir(&it)))
+					{
+						listsize++;
+						exfat_put_node(ef, node);
+					}
+					exfat_closedir(ef, &it);
+				}while(0);
+				exfat_put_node(ef,pdir);
 				
-#endif
 				return listsize;
 				//return 0;
 			}
 			break;
-		case OUTFTFILE:
+		case EXFTFILE:
 			return 0;
 		default:
 			return 0;

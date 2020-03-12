@@ -230,7 +230,7 @@ int exfat_mount(struct exfat* ef, const char* spec, const char* options)
 			ef->ro = 1;
 	}
 
-	ef->sb = malloc(sizeof(struct exfat_super_block));
+	ef->sb = (struct exfat_super_block *)malloc(sizeof(struct exfat_super_block));
 	if (ef->sb == NULL)
 	{
 		exfat_error("failed to allocate memory for the super block");

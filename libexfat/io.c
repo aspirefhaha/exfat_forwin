@@ -146,7 +146,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		}
 	}
 #endif
-	dev = malloc(sizeof(struct exfat_dev));
+	dev = (struct exfat_dev *)malloc(sizeof(struct exfat_dev));
 	if (dev == NULL)
 	{
 		exfat_error("failed to allocate memory for device structure");
@@ -266,7 +266,15 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #endif
 	{
 		/* works for Linux, FreeBSD, Solaris */
+#if defined(WIN32) && !defined(WIN64)
+
+		struct stat statbuf;
+		fstat(dev->fd,&statbuf);
+		dev->size = statbuf.st_size;
+
+#else
 		dev->size = exfat_seek(dev, 0, SEEK_END);
+#endif
 		if (dev->size <= 0)
 		{
 			close(dev->fd);

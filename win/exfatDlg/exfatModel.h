@@ -1,34 +1,43 @@
 #ifndef EXFATFSMODEL_H
 #define EXFATFSMODEL_H
-
+#define __bool_true_false_are_defined 1
+extern "C"{
+#include "exfat.h"
+}
 #include <QAbstractItemModel>
 #include <qthread.h>
 #include <Windows.h>
 
 enum EXFATITEMTYPE {
-	OUTFTDRIVE=1,
-	OUTFTSPEC,
-	OUTFTDIR,
-	OUTFTFILE,
-	OUTFTUNKNOWN
+	EXFTDRIVE=1,
+	EXFTSPEC,
+	EXFTDIR,
+	EXFTFILE,
+	EXFTUNKNOWN
 };
 
-struct ExfatFSPrivae 
+struct ExfatFSPrivate 
 {
 	QString absPath;
 	EXFATITEMTYPE fstype;
 	int m_col;
 	int m_row;
-	ExfatFSPrivae * m_pParent;
+	struct exfat * m_pexfatRoot;
+	ExfatFSPrivate * m_pParent;
 	
-	//QList<ExfatFSPrivae *> m_lsChildren;
+	//QList<ExfatFSPrivate *> m_lsChildren;
 
 	bool match(QString name,EXFATITEMTYPE fstype){
 		return name==absPath && fstype==this->fstype;
 	}
 
-	explicit ExfatFSPrivae(QString devname,EXFATITEMTYPE tt,int row,int col,ExfatFSPrivae * parent)
-		:absPath(devname),fstype(tt),m_row(row),m_col(col),m_pParent(parent){}
+	explicit ExfatFSPrivate(QString devname,EXFATITEMTYPE tt,int row,int col,ExfatFSPrivate * parent)
+		:absPath(devname),fstype(tt),m_row(row),m_col(col),m_pParent(parent),m_pexfatRoot(NULL){
+			if(parent!=NULL){
+				if(parent->m_pexfatRoot != NULL)
+					m_pexfatRoot = parent->m_pexfatRoot;
+			}
+	}
 };
 
 class ExfatModel : public QAbstractItemModel
@@ -48,20 +57,42 @@ public:
 
 	void addRootDevice(QString,EXFATITEMTYPE);
 
-	ExfatFSPrivae * findOutFSChild (QString abspath,EXFATITEMTYPE type)const;
+	ExfatFSPrivate * findOutFSChild (QString abspath,EXFATITEMTYPE type)const;
 
 	void refreshRootDevice();
 	const static int ONCEBLOCK = 512;
 	
 	
 	BOOL isDirectory(const char * dirpath);
+	BOOL isRootItem(ExfatFSPrivate * priv)const;
+
+	static QString covertHumanString(qlonglong orisize){
+		double ksize = orisize / 1024.0;
+		double msize = 0;
+		if(orisize>4096LL){
+
+			if(ksize > 1000){
+				msize = ksize / 1024;
+				double gsize = 0;
+				if(msize > 1000){
+					gsize = msize / 1024;
+					return QString::number(gsize) + " GB";
+				}
+				return QString::number(msize) + " MB";
+			}
+			else{
+				 return QString::number(ksize) + " KB";
+			}
+		}
+		return QString::number(orisize) + " B";
+	}
 
 public slots:
 
 	
 private:
-	QList<ExfatFSPrivae *> m_rootDrives;
-	QList<ExfatFSPrivae *> m_allItems;
+	QList<ExfatFSPrivate *> m_rootDrives;
+	QList<ExfatFSPrivate *> m_allItems;
 };
 
 enum BGWORKMODE

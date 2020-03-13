@@ -45,5 +45,8 @@ int get_cluster_size(void);
 
 int mkfs(struct exfat_dev* dev, off_t volume_size);
 off_t get_position(const struct fs_object* object);
+int setupfs(struct exfat_dev* dev, int sector_bits, int spc_bits,
+		const char* volume_label, uint32_t volume_serial,
+		uint64_t first_sector);
 
 #endif /* ifndef MKFS_MKEXFAT_H_INCLUDED */

@@ -267,11 +267,23 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 	{
 		/* works for Linux, FreeBSD, Solaris */
 #if defined(WIN32) && !defined(WIN64)
-
-		struct stat statbuf;
-		fstat(dev->fd,&statbuf);
+		struct mystat {
+        _dev_t     st_dev;
+        _ino_t     st_ino;
+        unsigned short st_mode;
+        short      st_nlink;
+        short      st_uid;
+        short      st_gid;
+        _dev_t     st_rdev;
+        size_t     st_size;
+        time_t st_atime;
+        time_t st_mtime;
+        time_t st_ctime;
+        };
+		struct mystat statbuf;
+		fstat(dev->fd,(struct stat *)&statbuf);
 		dev->size = statbuf.st_size;
-
+		//dev->size = exfat_seek(dev, 0, SEEK_END);
 #else
 		dev->size = exfat_seek(dev, 0, SEEK_END);
 #endif

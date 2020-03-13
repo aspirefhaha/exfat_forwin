@@ -8,10 +8,13 @@
 #include <qfileinfo.h>
 #include <qdatetime.h>
 #include <qdebug.h>
+#include "exnotepad.h"
 #include <qfileiconprovider.h>
 
 #include <Windows.h>
-
+extern "C"{
+	#include "../../mkfs/mkexfat.h"
+}
 
 ExfatModel::ExfatModel(QObject *parent)
 	: QAbstractItemModel(parent)
@@ -627,6 +630,11 @@ char* GBKToUTF8( const char* chGBK ){
 	return pUTF8Buf;
 }
 
+void ExfatModel::editFile(const QString&)
+{
+	
+}
+
 
 QVariant ExfatModel::headerData(int section, Qt::Orientation orientation, int role ) const
 {
@@ -746,7 +754,7 @@ QVariant ExfatModel::data(const QModelIndex & index,
 							filesize = covertHumanString(node->size);
 							
 						}
-						filelastmodifytime = QDateTime::fromTime_t(node->mtime).toString("yyyy-MM-dd hh::mm::ss");
+						filelastmodifytime = QDateTime::fromTime_t(node->mtime).toString("yyyy-MM-dd hh:mm:ss");
 						len = lstrlenW((LPCWSTR)&node->name);
 						filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
 					}
@@ -765,7 +773,7 @@ QVariant ExfatModel::data(const QModelIndex & index,
 					return QVariant(filelastmodifytime);
 					break;
 				default:
-					qDebug() << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!here!!!!!!!!!!!!!!!!!!!!!!!!!!";
+					qDebug() << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!should not here!!!!!!!!!!!!!!!!!!!!!!!!!!";
 					break;
 				}
 			}
@@ -807,6 +815,47 @@ QVariant ExfatModel::data(const QModelIndex & index,
     //return QAbstractItemModel::data();
 	return QVariant();
 }
+
+int ExfatModel::formatfs(const char * spec)
+{
+	struct exfat_dev * dev = exfat_open(spec, EXFAT_MODE_RW);
+	if (dev == NULL)
+		return 1;
+	if (setupfs(dev, 9, 6, "NEWFS", 0x1314,0) != 0)
+	{
+		exfat_close(dev);
+		return 1;
+	}
+	if (exfat_close(dev) != 0)
+		return 1;
+
+	addRootDevice(QString("fhaha.img"),EXFTDRIVE);
+	return 0;
+}
+
+int ExfatModel::resetfs()
+{
+	this->beginResetModel();
+	for(int i = 0; i < m_rootDrives.count(); i++)
+	{
+		ExfatFSPrivate * rootItem = m_rootDrives.at(i);
+		if(rootItem->m_pexfatRoot){
+			//TODO
+			exfat_unmount(rootItem->m_pexfatRoot);
+			free(rootItem->m_pexfatRoot);
+		}
+	}
+	m_rootDrives.clear();
+	
+	qDeleteAll(m_allItems);
+	m_allItems.clear();
+
+	formatfs("fhaha.img");
+	this->addRootDevice("fhaha.img",EXFTDRIVE);
+	this->endResetModel();
+	return 0;
+}
+
 QModelIndex ExfatModel::parent(const QModelIndex &child) const
 {
 	//qDebug() << "call parent with cild  row " << child.row() << " column " << child.column() ;

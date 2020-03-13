@@ -17,8 +17,19 @@ public:
 private:
 	Ui::exfatDlgClass ui;
 
-	ExfatModel eModel;
+	ExfatModel exfatModel;
 	QFileSystemModel InModel;
+	void editFile(const QModelIndex &);
+
+protected slots:
+	void sltFormat();
+	void sltEdit(bool);
+	void sltEdit(const QModelIndex &);
+	void sltAddDir(bool);
+	void sltAddFile(bool);
+	void sltProperties(bool);
+	void sltContextMenu(const QPoint &);
+
 };
 
 #endif // EXFATDLG_H

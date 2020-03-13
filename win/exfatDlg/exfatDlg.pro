@@ -20,9 +20,11 @@ INCLUDEPATH += .
 }
 # Input
 HEADERS += exfatdlg.h exfatModel.h
-FORMS += exfatdlg.ui
+FORMS += exfatdlg.ui \
+          exnotepad.ui
 SOURCES += exfatdlg.cpp \
            exfatModel.cpp \
+		   exnotepad.cpp \
            main.cpp 
 RESOURCES += exfatdlg.qrc
 TRANSLATIONS += zh_CN.ts

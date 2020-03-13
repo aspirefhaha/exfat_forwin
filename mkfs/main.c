@@ -200,7 +200,7 @@ static uint32_t setup_volume_serial(uint32_t user_defined)
 	return (now.tv_sec << 20) | now.tv_usec;
 }
 
-static int setup(struct exfat_dev* dev, int sector_bits, int spc_bits,
+int setupfs(struct exfat_dev* dev, int sector_bits, int spc_bits,
 		const char* volume_label, uint32_t volume_serial,
 		uint64_t first_sector)
 {
@@ -239,7 +239,7 @@ static void usage(const char* prog)
 			"[-s sectors-per-cluster] [-V] <device>\n", prog);
 	exit(1);
 }
-
+#if 0
 int main(int argc, char* argv[])
 {
 	const char* spec = NULL;
@@ -310,3 +310,5 @@ int main(int argc, char* argv[])
 	printf("File system created successfully.\n");
 	return 0;
 }
+
+#endif

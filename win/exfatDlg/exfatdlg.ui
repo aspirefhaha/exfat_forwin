@@ -24,6 +24,26 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pb_format">
+        <property name="text">
+         <string>Format</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -71,5 +91,59 @@
  <resources>
   <include location="exfatdlg.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pb_format</sender>
+   <signal>clicked()</signal>
+   <receiver>exfatDlgClass</receiver>
+   <slot>sltFormat()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>277</x>
+     <y>446</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>366</x>
+     <y>456</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tv_main</sender>
+   <signal>doubleClicked(QModelIndex)</signal>
+   <receiver>exfatDlgClass</receiver>
+   <slot>sltEdit(QModelIndex)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>132</x>
+     <y>267</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>73</x>
+     <y>447</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tv_main</sender>
+   <signal>customContextMenuRequested(QPoint)</signal>
+   <receiver>exfatDlgClass</receiver>
+   <slot>sltContextMenu(QPoint)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>179</x>
+     <y>396</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
+     <y>444</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>sltFormat()</slot>
+  <slot>sltEdit(QModelIndex)</slot>
+  <slot>sltContextMenu(QPoint)</slot>
+ </slots>
 </ui>

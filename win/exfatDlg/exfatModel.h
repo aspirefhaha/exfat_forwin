@@ -55,11 +55,16 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
+	int resetfs();
+
+	int formatfs(const char * spec);
+
 	void addRootDevice(QString,EXFATITEMTYPE);
 
 	ExfatFSPrivate * findOutFSChild (QString abspath,EXFATITEMTYPE type)const;
 
 	void refreshRootDevice();
+	void editFile(const QString&);
 	const static int ONCEBLOCK = 512;
 	
 	

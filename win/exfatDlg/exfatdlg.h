@@ -29,6 +29,8 @@ protected slots:
 	void sltAddFile(bool);
 	void sltProperties(bool);
 	void sltContextMenu(const QPoint &);
+	void dragEnterEvent(QDragEnterEvent *);
+	void dropEvent(QDropEvent * event);
 
 };
 

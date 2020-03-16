@@ -14,6 +14,7 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),exfatModel(this)
 {
 	ui.setupUi(this);
+	setAcceptDrops(true);
 	//InModel.setRootPath("C:");
 	exfatModel.addRootDevice(QString("fhaha.img"),EXFTDRIVE);
 	//ui.tv_main->setModel(&InModel);
@@ -25,6 +26,63 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	ui.tv_main->setSelectionBehavior(QTreeView::SelectRows);			//一次选中整行    
 	ui.tv_main->setSelectionMode(QTreeView::SingleSelection);        //单选，配合上面的整行就是一次选单行
 	ui.tv_main->setColumnWidth(0,250);
+
+}
+
+void exfatDlg::dragEnterEvent(QDragEnterEvent * enterEvent)
+{
+	const QMimeData * eventdata = enterEvent->mimeData();
+	if(eventdata->hasUrls()){
+		enterEvent->accept();
+	}
+	
+}
+
+void exfatDlg::dropEvent(QDropEvent * event)
+{
+	auto src = event->source();
+	//event->setDropAction(Qt::LinkAction);
+	//event->accept();
+	const QMimeData * eventdata = event->mimeData();
+	qDebug() << eventdata->text();
+	qDebug() << eventdata;
+	QPoint noewpos = event->pos();
+	qDebug() << "evebt pos: " <<  noewpos;
+	QPoint globalpos = this->mapToGlobal(noewpos);
+	qDebug() << "global pos: " << globalpos;
+	QPoint ctlpos = ui.tv_main->mapFromGlobal(globalpos);
+	
+	qDebug() << "ctl pos : " << ctlpos;
+	ctlpos.operator-=(QPoint(0,ui.tv_main->header()->height()));
+	qDebug() << "new ctl pos : " << ctlpos;
+	QModelIndex curIndex = ui.tv_main->indexAt(ctlpos);      //当前点击的元素的index 
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "edit here" << index;
+		qDebug() << pItemData->absPath;
+	}
+
+	if(eventdata->hasUrls()){
+		QList<QUrl>urlList=eventdata->urls();    //获取URL列表
+       if(urlList.isEmpty())return ;
+       //将其中第一个URL表示为本地文件路径
+       QString fileName=urlList.at(0).toLocalFile();
+       if(fileName.isEmpty())return;
+ 
+       if(!fileName.isEmpty())                 //若文件路径不为空
+       {
+           QFile file(fileName);  //建立QFile对象并只读方式打开该文件
+           //窗口标题更改为显示文件路径
+           setWindowTitle(tr("%1 - %2").arg(fileName).arg("DND File"));
+           if(!file.open(QIODevice::ReadOnly)) return; 
+           
+           QTextStream in(&file); //建立文本流对象
+           //qDebug() << in.readAll(); //1.纯代码时使用。将文件所有内容读入编辑器
+           //textEdit->setText(in.readAll());   //2.纯代码时使用。将文件所有内容读入编辑器
+       }
+
+	}
 
 }
 
@@ -141,7 +199,8 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 				  QMenu::item:selected{color:#E8E8E8;border:0px solid #575757;background:#1E90FF;}\
 				  QMenu::separator{height:1px;background:#757575;}"; 
 	QMenu menu;    
-	menu.setStyleSheet(qss);    //可以给菜单设置样式     
+	menu.setStyleSheet(qss);    //可以给菜单设置样式   
+	qDebug() << "right pos: " <<  pos;
 	QModelIndex curIndex = ui.tv_main->indexAt(pos);      //当前点击的元素的index    
 	QModelIndex index = curIndex.sibling(curIndex.row(),0); //该行的第1列元素的index   
 

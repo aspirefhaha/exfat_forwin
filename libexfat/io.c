@@ -71,10 +71,25 @@ int pread(int fd, char * buf, size_t size, off_t off)
 int pwrite(int fd, char * buf, size_t size, off_t off)
 {
 	off_t ret = lseek(fd,  off,SEEK_SET );
+	size_t writtensize = 0,readsize = 0;
+	unsigned char * readbuf = NULL;
 	if (ret == (off_t)-1) {
 		return 0;
 	}
-	return write(fd, buf, size);
+	writtensize =  write(fd, buf, size);
+	if(writtensize != size){
+		return 0;
+	}
+	readbuf = (unsigned char*)malloc(size);
+	ret = lseek(fd,off,SEEK_SET);
+	readsize = read(fd,readbuf,size);
+	if(memcmp(buf,readbuf,size)!=0){
+		ret = -1;
+	}
+	else
+		ret = size;
+	free(readbuf);
+	return ret;
 }
 
 #endif
@@ -97,12 +112,20 @@ static bool is_open(int fd)
 #endif
 static int open_ro(const char* spec)
 {
+#ifdef WIN32
+	return open(spec, O_RDONLY | O_BINARY);
+#else
 	return open(spec, O_RDONLY);
+#endif
 }
 
 static int open_rw(const char* spec)
 {
+#ifdef WIN32
+	int fd = open(spec, O_RDWR | O_BINARY);
+#else
 	int fd = open(spec, O_RDWR);
+#endif
 #ifdef __linux__
 	int ro = 0;
 

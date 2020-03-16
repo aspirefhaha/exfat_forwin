@@ -71,6 +71,10 @@ public:
 	BOOL isDirectory(const char * dirpath);
 	BOOL isRootItem(ExfatFSPrivate * priv)const;
 
+	void notifyChange(const QModelIndex & someindex,const QModelIndex &rbindex){
+		emit dataChanged(someindex,rbindex);
+	}
+
 	static QString covertHumanString(qlonglong orisize){
 		double ksize = orisize / 1024.0;
 		double msize = 0;

@@ -995,7 +995,7 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 	const size_t name_length = exfat_utf16_length(name);
 	const int name_entries = DIV_ROUND_UP(name_length, EXFAT_ENAME_MAX);
 #ifdef WIN32
-	struct exfat_entry *entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * 2 + name_entries);
+	struct exfat_entry *entries = (struct exfat_entry*)malloc(sizeof(struct exfat_entry) * (2 + name_entries));
 #else
 	struct exfat_entry entries[2 + name_entries];
 #endif
@@ -1037,7 +1037,7 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 	meta1->checksum = exfat_calc_checksum(entries, 2 + name_entries);
 	rc = write_entries(ef, dir, entries, 2 + name_entries, offset);
 	if (rc != 0) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}
@@ -1047,7 +1047,7 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 
 	node = allocate_node();
 	if (node == NULL) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}
@@ -1060,7 +1060,7 @@ static int commit_entry(struct exfat* ef, struct exfat_node* dir,
 	init_node_meta2(node, meta2);
 
 	tree_attach(dir, node); 
-#ifndef WIN32
+#ifdef WIN32
 	if (entries) {
 		free(entries);
 	}

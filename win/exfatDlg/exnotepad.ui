@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>675</width>
-    <height>541</height>
+    <width>710</width>
+    <height>585</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,9 +20,57 @@
    <item>
     <widget class="QTextEdit" name="te_main"/>
    </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pb_save">
+       <property name="text">
+        <string>Save</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <tabstops>
+  <tabstop>pb_save</tabstop>
+  <tabstop>te_main</tabstop>
+ </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pb_save</sender>
+   <signal>clicked()</signal>
+   <receiver>exNotepad</receiver>
+   <slot>sltSave()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>640</x>
+     <y>563</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>707</x>
+     <y>499</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>sltSave()</slot>
+ </slots>
 </ui>

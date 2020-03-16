@@ -75,8 +75,31 @@ void exfatDlg::sltAddDir(bool sel)
 	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
 	if(index.isValid()){
 		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
-		qDebug() << "add dir here" << index;
-		qDebug() << pItemData->absPath;
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		QString dirname = QInputDialog::getText(this,tr("Input"),tr("New Dir Name")).trimmed();
+		if(!dirname.isEmpty()){
+			char newdirname[MAX_PATH]={0};
+			QString newabsname ;
+			dirname.replace(" " ,"");
+			
+			if(pItemData->fstype == EXFTDRIVE){
+				newabsname = "/" + dirname;
+			}
+			else{
+				newabsname = pItemData->absPath + "/" + dirname;	
+			}
+			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),MAX_PATH,newabsname.length());
+			if(exfat_mkdir(pItemData->m_pexfatRoot,newdirname)!=0){
+				QMessageBox::warning(this, tr("Create Err"), tr("Create Dir Failed!"),QMessageBox::Ok,QMessageBox::Ok);
+			}
+		}
+		
+		QModelIndex rbindex = index.sibling(index.row(),3);
+		exfatModel.notifyChange(index,rbindex);
 	}
 }
 
@@ -133,6 +156,9 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 		menu.addAction(tr("Properties"), this, SLOT(sltProperties(bool)));        
 		menu.addSeparator();    //添加一个分隔线 
 		switch(pItemData->fstype){
+		case EXFTDRIVE:
+			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  
+			break;
 		case EXFTFILE:
 			menu.addAction(tr("Edit"), this, SLOT(sltEdit(bool)));  
 			break;

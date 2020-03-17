@@ -25,6 +25,7 @@ FORMS += exfatdlg.ui \
 SOURCES += exfatdlg.cpp \
            exfatModel.cpp \
 		   exnotepad.cpp \
+		   BgWorkThread.cpp \
            main.cpp 
 RESOURCES += exfatdlg.qrc
 TRANSLATIONS += zh_CN.ts

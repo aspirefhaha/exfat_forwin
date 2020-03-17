@@ -32,6 +32,9 @@
 #include <fcntl.h>
 #if !defined(WIN32)
 #include <unistd.h>
+#else
+#include <io.h>
+#include <process.h>
 #endif
 #include <string.h>
 #include <errno.h>
@@ -289,7 +292,9 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #endif
 	{
 		/* works for Linux, FreeBSD, Solaris */
+		//TODO
 #if defined(WIN32) && !defined(WIN64)
+#if 0
 		struct mystat {
         _dev_t     st_dev;
         _ino_t     st_ino;
@@ -306,6 +311,13 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		struct mystat statbuf;
 		fstat(dev->fd,(struct stat *)&statbuf);
 		dev->size = statbuf.st_size;
+#else
+		FILE * fp = fdopen(dev->fd,"r");
+		_fseeki64(fp,0,SEEK_END);
+ 
+        dev->size = _ftelli64(fp);
+		//fclose(fp);
+#endif
 		//dev->size = exfat_seek(dev, 0, SEEK_END);
 #else
 		dev->size = exfat_seek(dev, 0, SEEK_END);
@@ -402,6 +414,7 @@ off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence)
 	/* XXX SEEK_CUR will be handled incorrectly */
 	return dev->pos = lseek(dev->fd, offset, whence);
 #else
+	
 	return lseek(dev->fd, offset, whence);
 #endif
 }

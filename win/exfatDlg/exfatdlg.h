@@ -6,6 +6,8 @@
 #include <QtGui>
 #include "ui_exfatdlg.h"
 
+#include "BgWorkThread.h"
+#include <QProgressDialog>
 class exfatDlg : public QMainWindow
 {
 	Q_OBJECT
@@ -20,6 +22,9 @@ private:
 	ExfatModel exfatModel;
 	QFileSystemModel InModel;
 	void editFile(const QModelIndex &);
+	QProgressDialog dia;
+	BgWorkThread bgcopyTh;
+	qint64 m_progesssize ;
 
 protected slots:
 	void sltFormat();
@@ -30,7 +35,14 @@ protected slots:
 	void sltProperties(bool);
 	void sltContextMenu(const QPoint &);
 	void dragEnterEvent(QDragEnterEvent *);
+	void dragMoveEvent(QDragMoveEvent *);
 	void dropEvent(QDropEvent * event);
+	void copyDone();
+	void updateCpSize(qlonglong);
+
+	void updateCpProg(qlonglong);
+
+
 
 };
 

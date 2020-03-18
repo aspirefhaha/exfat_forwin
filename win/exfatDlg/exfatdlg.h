@@ -39,7 +39,7 @@ protected slots:
 	void dropEvent(QDropEvent * event);
 	void copyDone();
 	void updateCpSize(qlonglong);
-
+	void showWarningMsg(QString & ,QString&);
 	void updateCpProg(qlonglong);
 
 

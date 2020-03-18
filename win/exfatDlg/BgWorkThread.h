@@ -48,6 +48,7 @@ signals:
 	void calcItemCount(int,int);
 	void updateSize(qlonglong);
 	void updateProg(qlonglong);
+	void warningMsg(QString & ,QString&);
 	void copyDone();
 protected:
 	bool m_bIsQuit;
@@ -64,7 +65,7 @@ private:
 	int m_alreadyCopyedCount;
 	int m_currentTotalCount;
 	quint64 CopyFileToExfat(QString &sourcefile,QString & targetdir,quint64 cursize);
-	void CopyDirToExfat(const char * outdir,const char * outdirname,const char * indir,const char * outrootdir);
+	quint64 CopyDirToExfat(QString &sourcedir,QString & targetdir,quint64 cursize);
 };
 
 #endif // BGWORKTHREAD_H

@@ -1,6 +1,7 @@
 #include "BgWorkThread.h"
 #include <windows.h>
 #include <QtCore>
+#include <QMessageBox>
 
 void BgWorkThread::run()
 {
@@ -61,57 +62,43 @@ void BgWorkThread::run()
 	}
 }
 
-void BgWorkThread::CopyDirToExfat(const char * outdir,const char * outdirname,const char * indir,const char * outrootdir)
+quint64 BgWorkThread::CopyDirToExfat(QString &sourcedir,QString & targetdir,quint64 cursize)
 {
-	char sourceabspath[MAX_PATH]={0};
-	char targetabspath[MAX_PATH]={0};
-	char findabspath[MAX_PATH]={0};
-	int outrootdirlen = strlen(outrootdir);
-	sprintf(findabspath,"%s/%s/*",outdir,outdirname);
-	sprintf(sourceabspath,"%s/%s",outdir,outdirname);
-	char * poutpath = sourceabspath+outrootdirlen+1;
-	sprintf(targetabspath,"%s/%s",indir,poutpath);
-	QDir dir(QString::fromLocal8Bit(targetabspath));
-    if(!dir.exists())
+	QFileInfo fileinfo(sourcedir);
+	char utf8str[MAX_PATH]={0};
+	
+	QString targetdirname ;
+	if(targetdir.endsWith("/"))
+		targetdirname = targetdir + fileinfo.fileName();
+	else
+		targetdirname = targetdir + "/" + fileinfo.fileName();
+	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetdirname.data(),MAX_PATH,targetdirname.length());
+	if(exfat_mkdir(ef,utf8str)!=0){
+		QString msgErr = QString(tr("Create Dir %1 Failed")).arg(targetdirname);
+		
+		QString title = tr("Mkdir Err");
+		emit warningMsg(title,msgErr);
+		return 0;
+	}
+	QDir dir(sourcedir);
+	quint64 localcursize = cursize;
+    dir.setFilter(QDir::Dirs|QDir::Files);
+    foreach(QFileInfo fullDir, dir.entryInfoList())
     {
-      dir.mkdir(QString::fromLocal8Bit(targetabspath));//只创建一级子目录，即必须保证上级目录存在
+        if(fullDir.fileName() == "." || fullDir.fileName() == "..") continue;
+		QString subtargetdir = targetdirname ;
+		QString curdirname = fullDir.absoluteFilePath();
+		QFileInfo subfileinfo(curdirname);
+		if(subfileinfo.isDir()){
+			localcursize +=  CopyDirToExfat(curdirname,subtargetdir,localcursize);
+		}
+		else{
+			localcursize +=  CopyFileToExfat(curdirname,subtargetdir,localcursize);
+			emit updateSize(localcursize);
+		}
     }
-	WIN32_FIND_DATA fd;
-#if 0
-    long long hFindFile = ExfatModel::pFunc->FindFirstFile(findabspath,&fd);
-	if(hFindFile == -1 || hFindFile == 0){
-		ExfatModel::pFunc->CloseHandle(hFindFile);
-		return;
-	}
-	else{
-		bool isFinished = false;
-		BOOL bIsDirectory = FALSE;
-		int idx = 0;
-		while(!isFinished){  
-			bIsDirectory = ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);  
-              
-			//如果是.或..  
-			if( bIsDirectory  
-				&& (strcmp(fd.cFileName, ".")==0 || strcmp(fd.cFileName, "..")==0))   
-			{         
-				isFinished = (ExfatModel::pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-				continue;  
-			} 
-			
-			if(bIsDirectory){
-				CopyDirToExfat(sourceabspath,fd.cFileName,indir,outrootdir);
-			}
-			else{
-				CopyFileToExfat(sourceabspath,fd.cFileName,indir,outrootdir);
-			}
-			isFinished = (ExfatModel::pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
-		}  
-          
-		ExfatModel::pFunc->FindClose(hFindFile);  
-	}
-#endif
-	m_alreadyCopyedCount++;
-	emit calcItemCount(m_alreadyCopyedCount,m_currentTotalCount);
+	emit updateSize(localcursize);
+	return localcursize;
 }
 
 quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,quint64 cursize)
@@ -223,7 +210,7 @@ int BgWorkThread::CopyFilesToExfat(QList<QString> selOutPaths,QString intargetdi
 	for(;iter!=m_selPaths.end() && !m_bIsQuit;iter++){
 		QFileInfo fileinfo(*iter);
 		if(fileinfo.isDir()){ // is a dir
-			//CopyDirToExfat(outRootDir,filename,intargetdir.toStdString().c_str(),outRootDir);
+			CopyDirToExfat(*iter,intargetdir,cursize);
 		}
 		else{ // is a file 
 			cursize += CopyFileToExfat(*iter,intargetdir,cursize);

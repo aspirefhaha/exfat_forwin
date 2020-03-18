@@ -32,8 +32,13 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	connect(&bgcopyTh,SIGNAL(updateSize(qlonglong )),this,SLOT(updateCpSize(qlonglong)));
 	connect(&bgcopyTh,SIGNAL(updateProg(qlonglong)),this,SLOT(updateCpProg(qlonglong)));
 	connect(&bgcopyTh,SIGNAL(copyDone()),this,SLOT(copyDone()));
-	
+	connect(&bgcopyTh,SIGNAL(warningMsg(QString & ,QString&)),this,SLOT(showWarningMsg(QString & ,QString&)));
+}
 
+void exfatDlg::showWarningMsg(QString & title,QString & msg)
+{
+	
+	QMessageBox::warning(this, title, msg,QMessageBox::Ok,QMessageBox::Ok);
 }
 
 void exfatDlg::copyDone()
@@ -124,9 +129,14 @@ void exfatDlg::dropEvent(QDropEvent * event)
 			QFile file(fileName);  //建立QFile对象并只读方式打开该文件
 			//窗口标题更改为显示文件路径
 			//setWindowTitle(tr("%1 - %2").arg(fileName).arg("DND File"));
-			if(!file.open(QIODevice::ReadOnly)) 
-				return; 
-            file.close();
+			if(!file.open(QIODevice::ReadOnly)){
+				QFileInfo fileinfo(fileName);
+				if(!fileinfo.isDir())
+					return; 
+			}
+			else{
+				file.close();
+			}
 			//QTextStream in(&file); //建立文本流对象
 			//qDebug() << in.readAll(); //1.纯代码时使用。将文件所有内容读入编辑器
 			//textEdit->setText(in.readAll());   //2.纯代码时使用。将文件所有内容读入编辑器

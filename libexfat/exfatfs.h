@@ -26,7 +26,7 @@
 #include "byteorder.h"
 #include "compiler.h"
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(__WIN__)
 typedef  long long ssize_t;
 #endif
 typedef uint32_t cluster_t;		/* cluster number */

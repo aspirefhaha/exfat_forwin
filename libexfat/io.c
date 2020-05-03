@@ -425,7 +425,7 @@ off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence)
 #endif
 }
 
-ssize_t exfat_read(struct exfat_dev* dev, void* buffer, size_t size)
+long long  exfat_read(struct exfat_dev* dev, void* buffer, size_t size)
 {
 #ifdef USE_UBLIO
 	ssize_t result = ublio_pread(dev->ufh, buffer, size, dev->pos);
@@ -437,7 +437,7 @@ ssize_t exfat_read(struct exfat_dev* dev, void* buffer, size_t size)
 #endif
 }
 
-ssize_t exfat_write(struct exfat_dev* dev, const void* buffer, size_t size)
+long long  exfat_write(struct exfat_dev* dev, const void* buffer, size_t size)
 {
 #ifdef USE_UBLIO
 	ssize_t result = ublio_pwrite(dev->ufh, buffer, size, dev->pos);
@@ -449,7 +449,7 @@ ssize_t exfat_write(struct exfat_dev* dev, const void* buffer, size_t size)
 #endif
 }
 
-ssize_t exfat_pread(struct exfat_dev* dev, void* buffer, size_t size,
+long long exfat_pread(struct exfat_dev* dev, void* buffer, size_t size,
 		off_t offset)
 {
 #ifdef USE_UBLIO
@@ -459,7 +459,7 @@ ssize_t exfat_pread(struct exfat_dev* dev, void* buffer, size_t size,
 #endif
 }
 
-ssize_t exfat_pwrite(struct exfat_dev* dev, const void* buffer, size_t size,
+long long exfat_pwrite(struct exfat_dev* dev, const void* buffer, size_t size,
 		off_t offset)
 {
 #ifdef USE_UBLIO
@@ -469,7 +469,7 @@ ssize_t exfat_pwrite(struct exfat_dev* dev, const void* buffer, size_t size,
 #endif
 }
 
-ssize_t exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
+long long exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
 		void* buffer, size_t size, off_t offset)
 {
 	uint64_t newsize = offset;
@@ -517,7 +517,7 @@ ssize_t exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
 	return MIN(size, node->size - newsize) - remainder;
 }
 
-ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
+long long exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 		const void* buffer, size_t size, off_t offset)
 {
 	uint64_t newsize = offset;

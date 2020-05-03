@@ -24,9 +24,17 @@
 #ifndef EXFAT_H_INCLUDED
 #define EXFAT_H_INCLUDED
 
+#ifdef DLL_EXPORTS
+
+#define EXFAT_EXPORT	__declspec(dllexport)
+
+#else
+#define EXFAT_EXPORT __declspec(dllimport)
+#endif
+
 #ifndef ANDROID
 /* Android.bp is used instead of autotools when targeting Android */
-#ifndef WIN32
+#if  !defined(WIN32) && !defined(__WIN__)
 #include "config.h"
 #endif
 #endif
@@ -35,7 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#ifdef WIN32
+#if defined(WIN32) || defined(__WIN__)
 #if _MSC_VER < 1900
 #include "../win/libexfat/stdbool.h"
 #ifndef _CRT_NO_TIME_T
@@ -53,6 +61,10 @@ struct timespec
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define EXFAT_NAME_MAX 255
 /* UTF-16 encodes code points up to U+FFFF as single 16-bit code units.
@@ -163,103 +175,105 @@ struct exfat_human_bytes
 extern int exfat_errors;
 extern int exfat_errors_fixed;
 
-void exfat_bug(const char* format, ...) PRINTF NORETURN;
-void exfat_error(const char* format, ...) PRINTF;
-void exfat_warn(const char* format, ...) PRINTF;
-void exfat_debug(const char* format, ...) PRINTF;
+EXFAT_EXPORT void exfat_bug(const char* format, ...) PRINTF NORETURN;
+EXFAT_EXPORT void exfat_error(const char* format, ...) PRINTF;
+EXFAT_EXPORT void exfat_warn(const char* format, ...) PRINTF;
+EXFAT_EXPORT void exfat_debug(const char* format, ...) PRINTF;
 
-struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode);
-int exfat_close(struct exfat_dev* dev);
-int exfat_fsync(struct exfat_dev* dev);
-enum exfat_mode exfat_get_mode(const struct exfat_dev* dev);
-off_t exfat_get_size(const struct exfat_dev* dev);
-off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence);
-ssize_t exfat_read(struct exfat_dev* dev, void* buffer, size_t size);
-ssize_t exfat_write(struct exfat_dev* dev, const void* buffer, size_t size);
-ssize_t exfat_pread(struct exfat_dev* dev, void* buffer, size_t size,
+EXFAT_EXPORT struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode);
+EXFAT_EXPORT int exfat_close(struct exfat_dev* dev);
+EXFAT_EXPORT int exfat_fsync(struct exfat_dev* dev);
+EXFAT_EXPORT enum exfat_mode exfat_get_mode(const struct exfat_dev* dev);
+EXFAT_EXPORT off_t exfat_get_size(const struct exfat_dev* dev);
+EXFAT_EXPORT off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence);
+EXFAT_EXPORT long long exfat_read(struct exfat_dev* dev, void* buffer, size_t size);
+EXFAT_EXPORT long long exfat_write(struct exfat_dev* dev, const void* buffer, size_t size);
+EXFAT_EXPORT long long exfat_pread(struct exfat_dev* dev, void* buffer, size_t size,
 		off_t offset);
-ssize_t exfat_pwrite(struct exfat_dev* dev, const void* buffer, size_t size,
+EXFAT_EXPORT long long exfat_pwrite(struct exfat_dev* dev, const void* buffer, size_t size,
 		off_t offset);
-ssize_t exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
+EXFAT_EXPORT long long exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
 		void* buffer, size_t size, off_t offset);
-ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
+EXFAT_EXPORT long long exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 		const void* buffer, size_t size, off_t offset);
 
-int exfat_opendir(struct exfat* ef, struct exfat_node* dir,
+EXFAT_EXPORT int exfat_opendir(struct exfat* ef, struct exfat_node* dir,
 		struct exfat_iterator* it);
-void exfat_closedir(struct exfat* ef, struct exfat_iterator* it);
-struct exfat_node* exfat_readdir(struct exfat_iterator* it);
-int exfat_lookup(struct exfat* ef, struct exfat_node** node,
+EXFAT_EXPORT void exfat_closedir(struct exfat* ef, struct exfat_iterator* it);
+EXFAT_EXPORT struct exfat_node* exfat_readdir(struct exfat_iterator* it);
+EXFAT_EXPORT int exfat_lookup(struct exfat* ef, struct exfat_node** node,
 		const char* path);
-int exfat_split(struct exfat* ef, struct exfat_node** parent,
+EXFAT_EXPORT int exfat_split(struct exfat* ef, struct exfat_node** parent,
 		struct exfat_node** node, le16_t* name, const char* path);
 
-off_t exfat_c2o(const struct exfat* ef, cluster_t cluster);
-cluster_t exfat_next_cluster(const struct exfat* ef,
+EXFAT_EXPORT off_t exfat_c2o(const struct exfat* ef, cluster_t cluster);
+EXFAT_EXPORT cluster_t exfat_next_cluster(const struct exfat* ef,
 		const struct exfat_node* node, cluster_t cluster);
 cluster_t exfat_advance_cluster(const struct exfat* ef,
 		struct exfat_node* node, uint32_t count);
-int exfat_flush_nodes(struct exfat* ef);
-int exfat_flush(struct exfat* ef);
-int exfat_truncate(struct exfat* ef, struct exfat_node* node, uint64_t size,
+EXFAT_EXPORT int exfat_flush_nodes(struct exfat* ef);
+EXFAT_EXPORT int exfat_flush(struct exfat* ef);
+EXFAT_EXPORT int exfat_truncate(struct exfat* ef, struct exfat_node* node, uint64_t size,
 		int erase);
-uint32_t exfat_count_free_clusters(const struct exfat* ef);
-int exfat_find_used_sectors(const struct exfat* ef, off_t* a, off_t* b);
+EXFAT_EXPORT uint32_t exfat_count_free_clusters(const struct exfat* ef);
+EXFAT_EXPORT int exfat_find_used_sectors(const struct exfat* ef, off_t* a, off_t* b);
 
-void exfat_stat(const struct exfat* ef, const struct exfat_node* node,
+EXFAT_EXPORT void exfat_stat(const struct exfat* ef, const struct exfat_node* node,
 		struct stat* stbuf);
-void exfat_get_name(const struct exfat_node* node,
+EXFAT_EXPORT void exfat_get_name(const struct exfat_node* node,
 		char buffer[EXFAT_UTF8_NAME_BUFFER_MAX]);
-uint16_t exfat_start_checksum(const struct exfat_entry_meta1* entry);
-uint16_t exfat_add_checksum(const void* entry, uint16_t sum);
-le16_t exfat_calc_checksum(const struct exfat_entry* entries, int n);
-uint32_t exfat_vbr_start_checksum(const void* sector, size_t size);
-uint32_t exfat_vbr_add_checksum(const void* sector, size_t size, uint32_t sum);
-le16_t exfat_calc_name_hash(const struct exfat* ef, const le16_t* name,
+EXFAT_EXPORT uint16_t exfat_start_checksum(const struct exfat_entry_meta1* entry);
+EXFAT_EXPORT uint16_t exfat_add_checksum(const void* entry, uint16_t sum);
+EXFAT_EXPORT le16_t exfat_calc_checksum(const struct exfat_entry* entries, int n);
+EXFAT_EXPORT uint32_t exfat_vbr_start_checksum(const void* sector, size_t size);
+EXFAT_EXPORT uint32_t exfat_vbr_add_checksum(const void* sector, size_t size, uint32_t sum);
+EXFAT_EXPORT le16_t exfat_calc_name_hash(const struct exfat* ef, const le16_t* name,
 		size_t length);
-void exfat_humanize_bytes(uint64_t value, struct exfat_human_bytes* hb);
-void exfat_print_info(const struct exfat_super_block* sb,
+EXFAT_EXPORT void exfat_humanize_bytes(uint64_t value, struct exfat_human_bytes* hb);
+EXFAT_EXPORT void exfat_print_info(const struct exfat_super_block* sb,
 		uint32_t free_clusters);
 
-int exfat_utf16_to_utf8(char* output, const le16_t* input, size_t outsize,
+EXFAT_EXPORT int exfat_utf16_to_utf8(char* output, const le16_t* input, size_t outsize,
 		size_t insize);
-int exfat_utf8_to_utf16(le16_t* output, const char* input, size_t outsize,
+EXFAT_EXPORT int exfat_utf8_to_utf16(le16_t* output, const char* input, size_t outsize,
 		size_t insize);
-size_t exfat_utf16_length(const le16_t* str);
+EXFAT_EXPORT size_t exfat_utf16_length(const le16_t* str);
 
-struct exfat_node* exfat_get_node(struct exfat_node* node);
-void exfat_put_node(struct exfat* ef, struct exfat_node* node);
-int exfat_cleanup_node(struct exfat* ef, struct exfat_node* node);
-int exfat_cache_directory(struct exfat* ef, struct exfat_node* dir);
-void exfat_reset_cache(struct exfat* ef);
-int exfat_flush_node(struct exfat* ef, struct exfat_node* node);
-int exfat_unlink(struct exfat* ef, struct exfat_node* node);
-int exfat_rmdir(struct exfat* ef, struct exfat_node* node);
-int exfat_mknod(struct exfat* ef, const char* path);
-int exfat_mkdir(struct exfat* ef, const char* path);
-int exfat_rename(struct exfat* ef, const char* old_path, const char* new_path);
-void exfat_utimes(struct exfat_node* node, const struct timespec *tv);
-void exfat_update_atime(struct exfat_node* node);
-void exfat_update_mtime(struct exfat_node* node);
-const char* exfat_get_label(struct exfat* ef);
-int exfat_set_label(struct exfat* ef, const char* label);
+EXFAT_EXPORT struct exfat_node* exfat_get_node(struct exfat_node* node);
+EXFAT_EXPORT void exfat_put_node(struct exfat* ef, struct exfat_node* node);
+EXFAT_EXPORT int exfat_cleanup_node(struct exfat* ef, struct exfat_node* node);
+EXFAT_EXPORT int exfat_cache_directory(struct exfat* ef, struct exfat_node* dir);
+EXFAT_EXPORT void exfat_reset_cache(struct exfat* ef);
+EXFAT_EXPORT int exfat_flush_node(struct exfat* ef, struct exfat_node* node);
+EXFAT_EXPORT int exfat_unlink(struct exfat* ef, struct exfat_node* node);
+EXFAT_EXPORT int exfat_rmdir(struct exfat* ef, struct exfat_node* node);
+EXFAT_EXPORT int exfat_mknod(struct exfat* ef, const char* path);
+EXFAT_EXPORT int exfat_mkdir(struct exfat* ef, const char* path);
+EXFAT_EXPORT int exfat_rename(struct exfat* ef, const char* old_path, const char* new_path);
+EXFAT_EXPORT void exfat_utimes(struct exfat_node* node, const struct timespec *tv);
+EXFAT_EXPORT void exfat_update_atime(struct exfat_node* node);
+EXFAT_EXPORT void exfat_update_mtime(struct exfat_node* node);
+EXFAT_EXPORT const char* exfat_get_label(struct exfat* ef);
+EXFAT_EXPORT int exfat_set_label(struct exfat* ef, const char* label);
 
-int exfat_soil_super_block(const struct exfat* ef);
-int exfat_mount(struct exfat* ef, const char* spec, const char* options);
-void exfat_unmount(struct exfat* ef);
+EXFAT_EXPORT int exfat_soil_super_block(const struct exfat* ef);
+EXFAT_EXPORT int exfat_mount(struct exfat* ef, const char* spec, const char* options);
+EXFAT_EXPORT void exfat_unmount(struct exfat* ef);
 
-time_t exfat_exfat2unix(le16_t date, le16_t time, uint8_t centisec,
+EXFAT_EXPORT time_t exfat_exfat2unix(le16_t date, le16_t time, uint8_t centisec,
 		uint8_t tzoffset);
-void exfat_unix2exfat(time_t unix_time, le16_t* date, le16_t* time,
+EXFAT_EXPORT void exfat_unix2exfat(time_t unix_time, le16_t* date, le16_t* time,
 		uint8_t* centisec, uint8_t* tzoffset);
-void exfat_tzset(void);
+EXFAT_EXPORT void exfat_tzset(void);
 
-int exfat_ask_to_fix(const struct exfat* ef);
-int exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
+EXFAT_EXPORT int exfat_ask_to_fix(const struct exfat* ef);
+EXFAT_EXPORT int exfat_fix_invalid_vbr_checksum(const struct exfat* ef, void* sector,
 		uint32_t vbr_checksum);
-int exfat_fix_invalid_node_checksum(const struct exfat* ef,
+EXFAT_EXPORT int exfat_fix_invalid_node_checksum(const struct exfat* ef,
 		struct exfat_node* node);
-int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
+EXFAT_EXPORT int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 		const struct exfat_entry* entry, off_t offset);
-
+#ifdef __cplusplus
+}
+#endif
 #endif /* ifndef EXFAT_H_INCLUDED */

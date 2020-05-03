@@ -20,9 +20,9 @@ implements subclause 7.16 of ISO/IEC 9899:1999 (E)
 //#if __STDC_VERSION__ < 199901
 //typedef int _Bool;
 //#endif
-
+#ifndef __WIN__
 #define bool _Bool
 #define true 1
 #define false 0
-
+#endif
 #endif /* !defined(__bool_true_false_are_defined) */

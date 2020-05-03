@@ -1,0 +1,79 @@
+
+EXPORTS 
+	exfat_mount
+	exfat_bug
+	exfat_error
+	exfat_warn
+	exfat_debug
+	exfat_open
+	exfat_close
+	exfat_fsync
+	exfat_get_mode
+	exfat_get_size
+	exfat_seek
+	exfat_read
+	exfat_write
+	exfat_pread
+	exfat_pwrite
+	exfat_generic_pread
+	exfat_generic_pwrite
+
+	exfat_opendir
+	exfat_closedir
+	exfat_readdir
+	exfat_lookup
+	exfat_split
+
+	exfat_c2o
+	exfat_next_cluster
+	exfat_advance_cluster
+	exfat_flush_nodes
+	exfat_flush
+	exfat_truncate
+	exfat_count_free_clusters
+	exfat_find_used_sectors
+
+	exfat_stat
+	exfat_get_name
+	exfat_start_checksum
+	exfat_add_checksum
+	exfat_calc_checksum
+	exfat_vbr_start_checksum
+	exfat_vbr_add_checksum
+	exfat_calc_name_hash
+	exfat_humanize_bytes
+	exfat_print_info
+
+	exfat_utf16_to_utf8
+	exfat_utf8_to_utf16
+	exfat_utf16_length
+
+	exfat_get_node
+	exfat_put_node
+	exfat_cleanup_node
+	exfat_cache_directory
+	exfat_reset_cache
+	exfat_flush_node
+	exfat_unlink
+	exfat_rmdir
+	exfat_mknod
+	exfat_mkdir
+	exfat_rename
+	exfat_utimes
+	exfat_update_atime
+	exfat_update_mtime
+	exfat_get_label
+	exfat_set_label
+
+	exfat_soil_super_block
+	exfat_mount
+	exfat_unmount
+
+	exfat_exfat2unix
+	exfat_unix2exfat
+	exfat_tzset
+
+	exfat_ask_to_fix
+	exfat_fix_invalid_vbr_checksum
+	exfat_fix_invalid_node_checksum
+	exfat_fix_unknown_entry

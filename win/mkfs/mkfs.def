@@ -1,0 +1,13 @@
+EXPORTS 
+	get_sector_bits
+	get_spc_bits
+	get_volume_size
+	get_volume_label
+	get_volume_serial
+	get_first_sector
+	get_sector_size
+	get_cluster_size
+
+	mkfs
+	get_position
+	setupfs

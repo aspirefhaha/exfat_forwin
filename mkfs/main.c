@@ -33,12 +33,12 @@
 #include <sys/time.h>
 #include <unistd.h>
 #else
-#include <getopt.h>
+//#include <getopt.h>
 #include <time.h>
 #include <windows.h>
 #pragma comment(lib,"libexfat.lib")
 #ifdef _DEBUG
-#pragma comment(lib,"getoptd.lib")
+//#pragma comment(lib,"getoptd.lib")
 #else
 #pragma comment(lib,"getopt.lib")
 #endif

@@ -9,6 +9,7 @@
 #pragma comment(lib,"mkfs.lib")
 #endif
 #include <qdebug.h>
+
 #include "exnotepad.h"
 exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),exfatModel(this),dia(this),bgcopyTh(this),m_progesssize(0)
@@ -16,7 +17,7 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	ui.setupUi(this);
 	setAcceptDrops(true);
 	//InModel.setRootPath("C:");
-	exfatModel.addRootDevice(QString("fhaha.img"),EXFTDRIVE);
+	exfatModel.addRootDevice(QString(XDISKDEFAULTKEY),EXFTDRIVE);
 	//ui.tv_main->setModel(&InModel);
 	//ui.tv_main->setRootIndex(InModel.index("C:"));
 	ui.tv_main->setModel(&exfatModel);
@@ -184,6 +185,7 @@ exfatDlg::~exfatDlg()
 
 void exfatDlg::sltFormat()
 {
+#ifndef USEXDISK
 	//qDebug() << "here";
 	QString fssizestr = QInputDialog::getText(this,tr("Input"),tr("New Filesystem Size(GB) between 32 and 64")).trimmed();
 	int fssize = fssizestr.toInt();
@@ -229,6 +231,7 @@ void exfatDlg::sltFormat()
 	WriteFile(hFile,         "\0",         1,         &nWritten,         NULL);     
 	SetEndOfFile(hFile);     
 	CloseHandle(hFile);
+#endif
 	exfatModel.resetfs();
 }
 

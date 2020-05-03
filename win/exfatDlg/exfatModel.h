@@ -7,7 +7,7 @@ extern "C"{
 #include <QAbstractItemModel>
 #include <qthread.h>
 #include <Windows.h>
-
+#define XDISKDEFAULTKEY	"123456"
 enum EXFATITEMTYPE {
 	EXFTDRIVE=1,
 	EXFTSPEC,

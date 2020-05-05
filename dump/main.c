@@ -141,8 +141,10 @@ static int dump_full(const char* spec, int used_sectors)
 	uint32_t free_clusters;
 	uint64_t free_sectors;
 
-	if (exfat_mount(&ef, spec, "ro") != 0)
+	if (exfat_mount(&ef, spec, "ro") != 0){
+		exfat_ask_to_fix(&ef);
 		return 1;
+	}
 
 	free_clusters = exfat_count_free_clusters(&ef);
 	free_sectors = (uint64_t) free_clusters << ef.sb->spc_bits;

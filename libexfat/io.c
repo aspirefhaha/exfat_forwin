@@ -67,36 +67,40 @@ static void xdisk_init()
 {
 	if(glibXDisk==NULL){
 		glibXDisk = LoadLibraryA("xDiskInterface.dll");
-		if(glibXDisk!= NULL){
-
+		if(glibXDisk== NULL){
+			OutputDebugString("Load xDiskInterface.dll Failed!!!!!!!!!!!\n");
+			return;
+		}
+		OutputDebugString("Load xDiskInterface.dll Ok\n");
+		pOpenXDisk = (API_OpenXDisk)GetProcAddress(glibXDisk,"OpenXDisk");
+		if(pOpenXDisk==NULL){
+			OutputDebugString("Get OpenXDisk Failed!!!!!!!!!!!\n");
+			return;
+		}
+		pCloseXDisk = (API_CloseXDisk)GetProcAddress(glibXDisk,"CloseXDisk");
+		if(pCloseXDisk==NULL){
+			OutputDebugString("Get CloseXDisk Failed!!!!!!!!!!\n");
+			return;
 		}
 
-	}
-	
-	pOpenXDisk = (API_OpenXDisk)GetProcAddress(glibXDisk,"OpenXDisk");
-	if(pOpenXDisk==NULL){
-		return;
-	}
-	pCloseXDisk = (API_CloseXDisk)GetProcAddress(glibXDisk,"CloseXDisk");
-	if(pCloseXDisk==NULL){
-		return;
-	}
+		pWriteHideSector = (API_WriteHideSector)GetProcAddress(glibXDisk,"WriteHideSector");
+		if(pWriteHideSector==NULL){
+			OutputDebugString("Get WriteHideSector Failed!!!!!!!!!!!\n");
+			return;
+		}
 
-	pWriteHideSector = (API_WriteHideSector)GetProcAddress(glibXDisk,"WriteHideSector");
-	if(pWriteHideSector==NULL){
-		return;
-	}
+		pReadHideSector = (API_ReadHideSector)GetProcAddress(glibXDisk,"ReadHideSector");
+		if(pReadHideSector==NULL){
+			OutputDebugString("Get ReadHideSector Failed!!!!!!!!!!!\n");
+			return;
+		}
 
-	pReadHideSector = (API_ReadHideSector)GetProcAddress(glibXDisk,"ReadHideSector");
-	if(pReadHideSector==NULL){
-		return;
+		pGetError = (API_GetError)GetProcAddress(glibXDisk,"GetError");
+		if(pGetError==NULL){
+			OutputDebugString("Get GetError Failed!!!!!!!!!!!!!\n");
+			return;
+		}
 	}
-
-	pGetError = (API_GetError)GetProcAddress(glibXDisk,"GetError");
-	if(pGetError==NULL){
-		return;
-	}
-	
 }
 
 static void xdisk_uninit()
@@ -104,6 +108,7 @@ static void xdisk_uninit()
 	if(glibXDisk != NULL){
 		FreeLibrary(glibXDisk);
 		glibXDisk = NULL;
+		OutputDebugString("xdisk_uninit !!!!!!!!!!!!!!!\n");
 	}
 }
 //TODO need change to USB Flash
@@ -112,21 +117,26 @@ int fsync(int fd)
 	//sync();
 	return 0;
 }
+#if USEXDISK==0
 #define XDISKSECSIZE 512
 #define XDISKCURTOTALSIZE (50000LL*1024LL*1024L)
+#endif
 int pread(HANDLE fd, char * buf, size_t size, off_t off)
 {
-#ifndef USEXDISK
-	off_t ret = lseek(fd,  off, SEEK_SET);
+#if USEXDISK==0
+	off_t ret = lseek((int)fd,  off, SEEK_SET);
 	if (ret == (off_t)-1) {
 		return 0;
 	}
-	return read(fd, buf, size);
+	return read((int)fd, buf, size);
 #else
 	BYTE tmpbuf[XDISKSECSIZE];
+	char errbuf[XDISKSECSIZE];
 	int readsec = 0;
 	size_t needsize = size;
 	size_t firstsecsize = 0;
+	sprintf((char *)errbuf,"\t\twant read at %llx size %u\n",off,size);
+	OutputDebugString((LPCSTR)errbuf);
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
 		size_t firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
@@ -135,7 +145,7 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 			memcpy(buf,&tmpbuf[off - startoff],firstsecsize);
 		}
 		else{
-			sprintf((char *)tmpbuf,"first read failed at %x  size %d errcode 0x%x\n",off,firstsecsize,pGetError());
+			sprintf((char *)tmpbuf,"first read failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError());
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
 		needsize -= firstsecsize;
@@ -147,7 +157,7 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 		if(pReadHideSector(fd, curoff,tmpbuf,1,FALSE,NULL))
 			memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,XDISKSECSIZE);
 		else{
-			sprintf((char *)tmpbuf,"mid read failed at %llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
+			sprintf((char *)tmpbuf,"mid read failed at 0x%llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
 		needsize -= XDISKSECSIZE;
@@ -159,7 +169,7 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 		if(pReadHideSector(fd, off / XDISKSECSIZE,tmpbuf,1,FALSE,NULL))
 			memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,needsize);
 		else{
-			sprintf((char *)tmpbuf,"last read failed at %llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
+			sprintf((char *)tmpbuf,"last read failed at 0x%llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
 		needsize = 0;
@@ -170,20 +180,20 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 
 int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 {
-#ifndef USEXDISK
-	off_t ret = lseek(fd,  off,SEEK_SET );
+#if USEXDISK==0
+	off_t ret = lseek((int)fd,  off,SEEK_SET );
 	size_t writtensize = 0,readsize = 0;
 	unsigned char * readbuf = NULL;
 	if (ret == (off_t)-1) {
 		return 0;
 	}
-	writtensize =  write(fd, buf, size);
+	writtensize =  write((int)fd, buf, size);
 	if(writtensize != size){
 		return 0;
 	}
 	readbuf = (unsigned char*)malloc(size);
-	ret = lseek(fd,off,SEEK_SET);
-	readsize = read(fd,readbuf,size);
+	ret = lseek((int)fd,off,SEEK_SET);
+	readsize = read((int)fd,readbuf,size);
 	if(memcmp(buf,readbuf,size)!=0){
 		ret = -1;
 	}
@@ -193,22 +203,28 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	return ret;
 #else
 	BYTE tmpbuf[XDISKSECSIZE];
+	char errbuf[XDISKSECSIZE];
 	int readsec = 0;
 	size_t needsize = size;
 	size_t firstsecsize = 0;
+	sprintf((char *)errbuf,"\t\twant write at %llx size %u\n",off,size);
+	OutputDebugString((LPCSTR)errbuf);
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
 		size_t firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
 		if(pReadHideSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)){
-			
 			memcpy(&tmpbuf[off - startoff],buf,firstsecsize);
 			if(pWriteHideSector(fd,startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)==FALSE){
-				sprintf((char *)tmpbuf,"first write at write failed at %llx  size %d errcode 0x%x\n",off,firstsecsize,pGetError());
-				OutputDebugString((LPCSTR)tmpbuf);
+				sprintf((char *)errbuf,"first write at write failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError());
+				OutputDebugString((LPCSTR)errbuf);
+				if(pWriteHideSector(fd,startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)==FALSE){
+					sprintf((char *)errbuf,"\ttry again first write at write failed at 0x%llx  size %d errcode 0x%x\n",off,firstsecsize,pGetError());
+					OutputDebugString((LPCSTR)errbuf);
+				}
 			}
 		}
 		else{
-			sprintf((char *)tmpbuf,"first read at write failed at %llx size %d errcode 0x%x\n",off,firstsecsize,pGetError());
+			sprintf((char *)tmpbuf,"first read at write failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError());
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
 		needsize -= firstsecsize;
@@ -219,8 +235,12 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 		off_t curoff = off / XDISKSECSIZE;
 		size_t cursecnum = needsize/XDISKSECSIZE;
 		if(pWriteHideSector(fd,curoff,(BYTE *)buf+firstsecsize,cursecnum,FALSE,NULL)==FALSE){
-			sprintf((char *)tmpbuf,"mid write at write failed at %llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
-			OutputDebugString((LPCSTR)tmpbuf);
+			sprintf((char *)errbuf,"mid write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE*cursecnum,pGetError());
+			OutputDebugString((LPCSTR)errbuf);
+			if(pWriteHideSector(fd,curoff,(BYTE *)buf+firstsecsize,cursecnum,FALSE,NULL)==FALSE){
+				sprintf((char *)errbuf,"\ttry again mid write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE*cursecnum,pGetError());
+				OutputDebugString((LPCSTR)errbuf);
+			}
 		}
 		
 		needsize -= cursecnum* XDISKSECSIZE;
@@ -232,12 +252,16 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 		if(pReadHideSector(fd, off / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)){
 			memcpy(tmpbuf,buf + firstsecsize + readsec * XDISKSECSIZE,needsize);
 			if(pWriteHideSector(fd,off/XDISKSECSIZE,tmpbuf,1,FALSE,NULL)==FALSE){
-				sprintf((char *)tmpbuf,"last write at write failed at %llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
-				OutputDebugString((LPCSTR)tmpbuf);
+				sprintf((char *)errbuf,"last write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
+				OutputDebugString((LPCSTR)errbuf);
+				if(pWriteHideSector(fd,off/XDISKSECSIZE,tmpbuf,1,FALSE,NULL)==FALSE){
+					sprintf((char *)errbuf,"try again last write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
+					OutputDebugString((LPCSTR)errbuf);
+				}
 			}
 		}
 		else{
-			sprintf((char *)tmpbuf,"last read at write failed at %llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
+			sprintf((char *)tmpbuf,"last read at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
 		needsize = 0;
@@ -250,10 +274,16 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 
 struct exfat_dev
 {
+#if USEXDISK==0
 	HANDLE fd;
+#else
+	int fd;
+#endif
 	enum exfat_mode mode;
 	off_t size; /* in bytes */
+#if USEXDISK!=0
 	off_t curpos; //in xdisk add for support lseek
+#endif
 #ifdef USE_UBLIO
 	off_t pos;
 	ublio_filehandle_t ufh;
@@ -268,12 +298,15 @@ static bool is_open(int fd)
 static HANDLE open_ro(const char* spec)
 {
 #ifdef WIN32
+#if USEXDISK
 	xdisk_init();
 	if(glibXDisk!=NULL){
 		HANDLE hDisk = pOpenXDisk((char *)spec,'E');
 		return hDisk;
 	}
-	//return open(spec, O_RDONLY | O_BINARY);
+#else
+	return (HANDLE)open(spec, O_RDONLY | O_BINARY);
+#endif
 #else
 	return open(spec, O_RDONLY);
 #endif
@@ -282,13 +315,17 @@ static HANDLE open_ro(const char* spec)
 static HANDLE open_rw(const char* spec)
 {
 #ifdef WIN32
+#if USEXDISK
 	xdisk_init();
 	if(glibXDisk!=NULL){
 		HANDLE hDisk = pOpenXDisk((char *)spec,'E');
 		return hDisk;
 	}
-	//int fd = open(spec, O_RDWR | O_BINARY);
-	return INVALID_HANDLE_VALUE;
+	return INVALID_HANDLE_VALUE;//
+#else
+	int fd = open(spec, O_RDWR | O_BINARY);
+	return (HANDLE)fd;
+#endif
 #else
 	int fd = open(spec, O_RDWR);
 #endif
@@ -385,7 +422,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		exfat_error("failed to open '%s': %s", spec, strerror(errno));
 		return NULL;
 	}
-#ifndef USEXDISK
+#if USEXDISK==0
 	if (fstat(dev->fd, &stbuf) != 0)
 	{
 		close(dev->fd);
@@ -459,7 +496,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		//TODO
 #if defined(WIN32) && !defined(WIN64)
 #if 1
-#ifndef USEXDISK
+#if USEXDISK==0
 		struct mystat {
         _dev_t     st_dev;
         _ino_t     st_ino;
@@ -494,11 +531,15 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #endif
 		//dev->size = exfat_seek(dev, 0, SEEK_END);
 #else
-		dev->size = exfat_seek(dev, 0, SEEK_END);
+		//dev->size = exfat_seek(dev, 0, SEEK_END);
+		struct _stat64 statbuf;
+		//fstat(dev->fd,(struct stat *)&statbuf);
+		_fstat64(dev->fd, &statbuf);
+		dev->size = statbuf.st_size;
 #endif
 		if (dev->size <= 0)
 		{
-#ifndef USEXDISK
+#if USEXDISK==0
 			close(dev->fd);
 #else
 			xdisk_uninit();
@@ -509,7 +550,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		}
 		if (exfat_seek(dev, 0, SEEK_SET) == -1)
 		{
-#ifndef USEXDISK
+#if USEXDISK==0
 			close(dev->fd);
 #else
 			xdisk_uninit();
@@ -553,7 +594,7 @@ int exfat_close(struct exfat_dev* dev)
 	}
 #endif
 	
-#ifndef USEXDISK
+#if USEXDISK==0
 	if (close(dev->fd) != 0)
 	{
 		exfat_error("failed to close device: %s", strerror(errno));
@@ -563,6 +604,7 @@ int exfat_close(struct exfat_dev* dev)
 	xdisk_init();
 	if(glibXDisk != NULL){
 		pCloseXDisk(dev->fd);
+		xdisk_uninit();
 	}
 #endif
 	free(dev);
@@ -580,7 +622,7 @@ int exfat_fsync(struct exfat_dev* dev)
 		rc = -EIO;
 	}
 #endif
-#ifndef USEXDISK
+#if USEXDISK==0
 	if (fsync(dev->fd) != 0)
 	{
 		exfat_error("fsync failed: %s", strerror(errno));
@@ -606,7 +648,7 @@ off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence)
 	/* XXX SEEK_CUR will be handled incorrectly */
 	return dev->pos = lseek(dev->fd, offset, whence);
 #else
-#ifndef USEXDISK	
+#if USEXDISK==0	
 	return lseek(dev->fd, offset, whence);
 #else
 	switch(whence){
@@ -632,7 +674,7 @@ long long  exfat_read(struct exfat_dev* dev, void* buffer, size_t size)
 		dev->pos += size;
 	return result;
 #else
-#ifndef USEXDISK
+#if USEXDISK==0
 	return read(dev->fd,buffer,size);
 #else
 	int readsize = pread(dev->fd, (char *)buffer, size,dev->curpos);
@@ -650,7 +692,7 @@ long long  exfat_write(struct exfat_dev* dev, const void* buffer, size_t size)
 		dev->pos += size;
 	return result;
 #else
-#ifndef USEXDISK
+#if USEXDISK==0
 	return  write(dev->fd, buffer, size);
 #else
 	int writesize = pwrite(dev->fd,(char*)buffer,size,dev->curpos);

@@ -111,7 +111,13 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 	off_t curpos = 0;
 	int bufsize = 2 << (ef->sb->spc_bits + ef->sb->sector_bits -1);
 	char utf8str[MAX_PATH]={0};
-	QString targetfilename = targetdir + "/" + fileinfo.fileName();
+	QString targetfilename ;
+	if(targetdir == "/" ){
+		targetfilename = "/" + fileinfo.fileName();
+	}
+	else{
+		targetfilename = targetdir + "/" + fileinfo.fileName();
+	}
 	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetfilename.data(),MAX_PATH,targetfilename.length());
     int mknoderet = exfat_mknod(ef,utf8str);
 	if(mknoderet==0){
@@ -137,6 +143,7 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 				}
 			}while(1);
 			free(pbuf);
+			exfat_flush_node(ef,node);
 			exfat_put_node(ef,node);
 		}
 	}

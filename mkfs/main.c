@@ -40,7 +40,7 @@
 #ifdef _DEBUG
 //#pragma comment(lib,"getoptd.lib")
 #else
-#pragma comment(lib,"getopt.lib")
+//#pragma comment(lib,"getopt.lib")
 #endif
 #ifdef WIN32
 #if _MSC_VER <= 1900

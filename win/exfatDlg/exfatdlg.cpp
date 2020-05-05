@@ -185,7 +185,7 @@ exfatDlg::~exfatDlg()
 
 void exfatDlg::sltFormat()
 {
-#ifndef USEXDISK
+#if USEXDISK==0
 	//qDebug() << "here";
 	QString fssizestr = QInputDialog::getText(this,tr("Input"),tr("New Filesystem Size(GB) between 32 and 64")).trimmed();
 	int fssize = fssizestr.toInt();
@@ -265,6 +265,82 @@ void exfatDlg::sltAddFile(bool sel)
 	}
 }
 
+void exfatDlg::sltDelete(bool sel)
+{
+	QModelIndex curIndex = ui.tv_main->currentIndex();    
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		
+		char selfilename[MAX_PATH]={0};
+		QString selabsname ;
+		selabsname = pItemData->absPath;
+
+				
+		exfat_utf16_to_utf8(selfilename,(const le16_t *)selabsname.data(),MAX_PATH,selabsname.length());
+		struct exfat_node * pnode;
+		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
+			if(exfat_unlink(pItemData->m_pexfatRoot,pnode)==0){
+				exfat_cleanup_node(pItemData->m_pexfatRoot,pnode);
+				QMessageBox::information(this, selabsname, tr("Delete Ok!"),QMessageBox::Ok,QMessageBox::Ok);
+			}
+		}
+		
+		QModelIndex rbindex = index.sibling(index.row(),3);
+		exfatModel.notifyChange(index,rbindex);
+	}
+}
+
+void exfatDlg::sltRename(bool sel)
+{
+	QModelIndex curIndex = ui.tv_main->currentIndex();    
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		QString dirname = QInputDialog::getText(this,tr("Input"),tr("New Name")).trimmed();
+		if(!dirname.isEmpty()){
+			char newdirname[MAX_PATH]={0};
+			char olddirname[MAX_PATH]={0};
+			QString newabsname ;
+			QString oldabsname;
+			dirname.replace("/" ,"");
+			dirname = dirname.trimmed();
+			
+			if(pItemData->fstype == EXFTDRIVE){
+				//newabsname = "/" + dirname;
+				return;
+			}
+			else{
+				oldabsname = pItemData->absPath;
+
+				newabsname = pItemData->absPath;
+				
+				newabsname.truncate(newabsname.lastIndexOf("/"));
+				newabsname.append( "/");
+				newabsname.append( dirname);	
+			}
+			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),MAX_PATH,newabsname.length());
+			exfat_utf16_to_utf8(olddirname,(const le16_t *)oldabsname.data(),MAX_PATH,oldabsname.length());
+			if(exfat_rename(pItemData->m_pexfatRoot,olddirname,newdirname)!=0){
+				QMessageBox::warning(this, tr("Rename Err"), tr("Rename Failed!"),QMessageBox::Ok,QMessageBox::Ok);
+			}
+		}
+		
+		QModelIndex rbindex = index.sibling(index.row(),3);
+		exfatModel.notifyChange(index,rbindex);
+	}
+}
+
 void exfatDlg::sltAddDir(bool sel)
 {
 	QModelIndex curIndex = ui.tv_main->currentIndex();    
@@ -280,7 +356,8 @@ void exfatDlg::sltAddDir(bool sel)
 		if(!dirname.isEmpty()){
 			char newdirname[MAX_PATH]={0};
 			QString newabsname ;
-			dirname.replace(" " ,"");
+			dirname.replace("/" ,"");
+			dirname = dirname.trimmed();
 			
 			if(pItemData->fstype == EXFTDRIVE){
 				newabsname = "/" + dirname;
@@ -357,11 +434,14 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  
 			break;
 		case EXFTFILE:
-			menu.addAction(tr("Edit"), this, SLOT(sltEdit(bool)));  
+			menu.addAction(tr("Edit"), this, SLOT(sltEdit(bool))); 
+			menu.addAction(tr("Rename"),this,SLOT(sltRename(bool)));
+			menu.addAction(tr("Delete"),this,SLOT(sltDelete(bool)));
 			break;
 		case EXFTDIR:
 			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  
 			menu.addAction(tr("Add File"), this, SLOT(sltAddFile(bool)));  
+			menu.addAction(tr("Rename"),this,SLOT(sltRename(bool)));
 			break;
 		}  
 	}    

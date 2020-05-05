@@ -369,6 +369,7 @@ QVariant ExfatModel::data(const QModelIndex & index,
 						filelastmodifytime = QDateTime::fromTime_t(node->mtime).toString("yyyy-MM-dd hh:mm:ss");
 						len = lstrlenW((LPCWSTR)&node->name);
 						filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
+						exfat_put_node(selPtr->m_pexfatRoot,node);
 					}
 				}while(0);
 				switch(index.column()){
@@ -595,6 +596,7 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 				struct exfat * ef = parentData->m_pexfatRoot;
 				struct exfat_node * prootdir  = exfat_get_node(ef->root);
 				struct exfat_node* node;
+				OutputDebugString("in drive rowCount\n");
 				do{
 					struct exfat_iterator it;
 					rc = exfat_opendir(ef, prootdir, &it);
@@ -618,6 +620,7 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 				struct exfat * ef = parentData->m_pexfatRoot;
 				struct exfat_node * pdir ;
 				char utf8str[MAX_PATH]={0};
+				OutputDebugString("in dir rowCount\n");
 				exfat_utf16_to_utf8(utf8str,(const le16_t *)parentData->absPath.data(),MAX_PATH,parentData->absPath.length());
 				rc = exfat_lookup(ef,&pdir,utf8str);
 				if(rc!=0)

@@ -29,21 +29,42 @@
 #include <inttypes.h>
 #endif
 
+#ifdef WIN32
+#include <Windows.h>
+#endif
+
 #define EXFAT_ENTRY_NONE (-1)
 
 struct exfat_node* exfat_get_node(struct exfat_node* node)
 {
+#ifdef WIN32
+	char tmpname[EXFAT_NAME_MAX]={0};
+	char tmpbuf[1024]={0};
+#endif
 	/* if we switch to multi-threaded mode we will need atomic
 	   increment here and atomic decrement in exfat_put_node() */
 	node->references++;
+#if 1
+	exfat_utf16_to_utf8(tmpname,node->name,1024,exfat_utf16_length(node->name));
+	sprintf(tmpbuf,"get name: %s ref : %d\n",tmpname,node->references);
+	OutputDebugString(tmpbuf);
+#endif
 	return node;
 }
 
 void exfat_put_node(struct exfat* ef, struct exfat_node* node)
 {
 	char buffer[EXFAT_UTF8_NAME_BUFFER_MAX];
-
+#ifdef WIN32
+	char tmpname[EXFAT_NAME_MAX]={0};
+	char tmpbuf[1024]={0};
+#endif
 	--node->references;
+#if 1
+	exfat_utf16_to_utf8(tmpname,node->name,1024,exfat_utf16_length(node->name));
+	sprintf(tmpbuf,"put name: %s ref : %d\n",tmpname,node->references);
+	OutputDebugString(tmpbuf);
+#endif
 	if (node->references < 0)
 	{
 		exfat_get_name(node, buffer);
@@ -1157,7 +1178,7 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 
 	rc = read_entries(ef, node->parent, entries, 2, node->entry_offset);
 	if (rc != 0) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}
@@ -1171,7 +1192,7 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 
 	rc = erase_node(ef, node);
 	if (rc != 0) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}
@@ -1196,7 +1217,7 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 	meta1->checksum = exfat_calc_checksum(entries, 2 + name_entries);
 	rc = write_entries(ef, dir, entries, 2 + name_entries, new_offset);
 	if (rc != 0) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}
@@ -1207,7 +1228,7 @@ static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 	memcpy(node->name, name, (EXFAT_NAME_MAX + 1) * sizeof(le16_t));
 	tree_detach(node);
 	tree_attach(dir, node); 
-#ifndef WIN32
+#ifdef WIN32
 	if (entries) {
 		free(entries);
 	}

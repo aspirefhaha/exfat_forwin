@@ -29,7 +29,9 @@
 #define EXFAT_EXPORT	__declspec(dllexport)
 
 #else
+
 #define EXFAT_EXPORT __declspec(dllimport)
+
 #endif
 
 #ifndef ANDROID
@@ -119,6 +121,7 @@ struct exfat_node
 	int is_dirty : 1;
 	int is_unlinked : 1;
 	uint64_t size;
+	off_t curpos;
 	time_t mtime, atime;
 	le16_t name[EXFAT_NAME_MAX + 1];
 };
@@ -257,6 +260,9 @@ EXFAT_EXPORT const char* exfat_get_label(struct exfat* ef);
 EXFAT_EXPORT int exfat_set_label(struct exfat* ef, const char* label);
 
 EXFAT_EXPORT int exfat_soil_super_block(const struct exfat* ef);
+#ifdef __cplusplus
+extern "C" 
+#endif
 EXFAT_EXPORT int exfat_mount(struct exfat* ef, const char* spec, const char* options);
 EXFAT_EXPORT void exfat_unmount(struct exfat* ef);
 
@@ -273,6 +279,7 @@ EXFAT_EXPORT int exfat_fix_invalid_node_checksum(const struct exfat* ef,
 		struct exfat_node* node);
 EXFAT_EXPORT int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 		const struct exfat_entry* entry, off_t offset);
+EXFAT_EXPORT void set_dllexfat(struct exfat * ief) NORETURN;
 #ifdef __cplusplus
 }
 #endif

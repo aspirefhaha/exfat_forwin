@@ -31,6 +31,8 @@ protected slots:
 	void sltEdit(bool);
 	void sltEdit(const QModelIndex &);
 	void sltAddDir(bool);
+	void sltRename(bool);
+	void sltDelete(bool);
 	void sltAddFile(bool);
 	void sltProperties(bool);
 	void sltContextMenu(const QPoint &);

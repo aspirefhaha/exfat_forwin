@@ -31,6 +31,7 @@
 #endif
 #include <unistd.h>
 #else
+#include <Windows.h>
 #if _MSC_VER < 1900
 #ifndef va_copy
 
@@ -48,7 +49,10 @@ int exfat_errors;
 void exfat_bug(const char* format, ...)
 {
 	va_list ap, aq;
-
+#ifdef WIN32
+	va_list ap1;
+	char tmpstr[1024] = "BUG:";
+#endif
 	va_start(ap, format);
 	va_copy(aq, ap);
 
@@ -68,7 +72,15 @@ void exfat_bug(const char* format, ...)
 #endif
 #endif
 	va_end(aq);
-
+#ifdef WIN32
+	
+	va_start(ap1, format);
+	vsprintf(&tmpstr[4], format, ap1);
+	va_end(ap1);
+	
+	OutputDebugString(tmpstr);
+	OutputDebugString("\n");
+#endif
 	abort();
 }
 
@@ -78,7 +90,10 @@ void exfat_bug(const char* format, ...)
 void exfat_error(const char* format, ...)
 {
 	va_list ap, aq;
-
+#ifdef WIN32
+	va_list ap1;
+	char tmpstr[1024] = "ERR:";
+#endif
 	exfat_errors++;
 	va_start(ap, format);
 	va_copy(aq, ap);
@@ -99,6 +114,15 @@ void exfat_error(const char* format, ...)
 #endif
 #endif
 	va_end(aq);
+
+#ifdef WIN32	
+	va_start(ap1, format);
+	vsprintf(&tmpstr[4], format, ap1);
+	va_end(ap1);
+	
+	OutputDebugString(tmpstr);
+	OutputDebugString("\n");
+#endif
 }
 
 /*
@@ -108,7 +132,10 @@ void exfat_error(const char* format, ...)
 void exfat_warn(const char* format, ...)
 {
 	va_list ap, aq;
-
+#ifdef WIN32
+	va_list ap1;
+	char tmpstr[1024] = "WRN:";
+#endif
 	va_start(ap, format);
 	va_copy(aq, ap);
 
@@ -128,6 +155,15 @@ void exfat_warn(const char* format, ...)
 #endif
 #endif
 	va_end(aq);
+#ifdef WIN32
+	va_start(ap1, format);
+	vsprintf(&tmpstr[4], format, ap1);
+	va_end(ap1);
+	
+	OutputDebugString(tmpstr);
+	OutputDebugString("\n");
+#endif
+	abort();
 }
 
 /*
@@ -136,11 +172,21 @@ void exfat_warn(const char* format, ...)
 void exfat_debug(const char* format, ...)
 {
 	va_list ap;
-
+#ifdef WIN32
+	va_list ap1;
+	char tmpstr[1024] = "DBG:";
+#endif
 	fflush(stdout);
 	fputs("DEBUG: ", stderr);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
 	fputs(".\n", stderr);
+#ifdef WIN32	
+	va_start(ap1, format);
+	vsprintf(&tmpstr[4], format, ap1);
+	va_end(ap1);
+	OutputDebugString(tmpstr);
+	OutputDebugString("\n");
+#endif
 }

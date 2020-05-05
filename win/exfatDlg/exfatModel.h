@@ -7,7 +7,11 @@ extern "C"{
 #include <QAbstractItemModel>
 #include <qthread.h>
 #include <Windows.h>
+#if USEXDISK==0
+#define XDISKDEFAULTKEY	"fhaha.img"
+#else
 #define XDISKDEFAULTKEY	"123456"
+#endif
 enum EXFATITEMTYPE {
 	EXFTDRIVE=1,
 	EXFTSPEC,

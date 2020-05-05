@@ -24,6 +24,7 @@ exNotepad::exNotepad(ExfatFSPrivate*exinfo ,QWidget *parent)
 			QString helstr = QString::fromUtf8((const char *)buf);
 			ui.te_main->setText(helstr);
 		}
+		exfat_flush_node(ef,node);
 		exfat_put_node(ef,node);
 		free(buf);
 	}
@@ -56,7 +57,7 @@ void exNotepad::sltSave()
 				exfat_put_node(ef,node);
 				return;
 			}
-			//exfat_flush_node(ef,node);
+			exfat_flush_node(ef,node);
 			exfat_put_node(ef,node);
 			this->close();
 		}

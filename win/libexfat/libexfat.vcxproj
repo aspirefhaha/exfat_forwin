@@ -33,7 +33,7 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v100</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -90,7 +90,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK;_FILE_OFFSET_BITS=64;_CRT_SECURE_NO_WARNINGS;__STDC_VERSION__=199901;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK=0;_FILE_OFFSET_BITS=64;_CRT_SECURE_NO_WARNINGS;__STDC_VERSION__=199901;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -163,6 +163,7 @@
     <ClCompile Include="..\..\libexfat\time.c" />
     <ClCompile Include="..\..\libexfat\utf.c" />
     <ClCompile Include="..\..\libexfat\utils.c" />
+    <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libexfat.def" />

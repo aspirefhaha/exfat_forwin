@@ -59,6 +59,10 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
+	void setFsFilename(QString & filename){
+		m_FSFileName = filename;
+	}
+
 	int resetfs();
 
 	int formatfs(const char * spec);
@@ -106,6 +110,7 @@ public slots:
 private:
 	QList<ExfatFSPrivate *> m_rootDrives;
 	QList<ExfatFSPrivate *> m_allItems;
+	QString m_FSFileName;
 };
 
 #endif // EXFATFSMODEL_H

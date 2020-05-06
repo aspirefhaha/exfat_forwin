@@ -280,6 +280,12 @@ EXFAT_EXPORT int exfat_fix_invalid_node_checksum(const struct exfat* ef,
 EXFAT_EXPORT int exfat_fix_unknown_entry(struct exfat* ef, struct exfat_node* dir,
 		const struct exfat_entry* entry, off_t offset);
 EXFAT_EXPORT void set_dllexfat(struct exfat * ief) NORETURN;
+
+EXFAT_EXPORT void set_ef(struct exfat * ief);
+
+EXFAT_EXPORT struct exfat * get_ef(void);
+
+EXFAT_EXPORT struct exfat * mountFS(const char * fspath);
 #ifdef __cplusplus
 }
 #endif

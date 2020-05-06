@@ -441,8 +441,8 @@ int ExfatModel::formatfs(const char * spec)
 	}
 	if (exfat_close(dev) != 0)
 		return 1;
-	QString fsname = XDISKDEFAULTKEY;
-	addRootDevice(fsname,EXFTDRIVE);
+	
+	addRootDevice(m_FSFileName,EXFTDRIVE);
 	return 0;
 }
 
@@ -463,8 +463,8 @@ int ExfatModel::resetfs()
 	qDeleteAll(m_allItems);
 	m_allItems.clear();
 
-	formatfs(XDISKDEFAULTKEY);
-	this->addRootDevice(XDISKDEFAULTKEY,EXFTDRIVE);
+	formatfs(m_FSFileName.toStdString().c_str());
+	this->addRootDevice(m_FSFileName.toStdString().c_str(),EXFTDRIVE);
 	this->endResetModel();
 	return 0;
 }

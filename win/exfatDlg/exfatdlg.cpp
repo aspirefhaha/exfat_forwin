@@ -17,7 +17,19 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	ui.setupUi(this);
 	setAcceptDrops(true);
 	//InModel.setRootPath("C:");
-	exfatModel.addRootDevice(QString(XDISKDEFAULTKEY),EXFTDRIVE);
+	QString fileName = QFileDialog::getOpenFileName(
+		this, 
+		tr("open a file."),
+		"./", 
+		tr("File img(*.img);;All files(*.*)"));
+	if (fileName.isEmpty()) {
+		QMessageBox::warning(this, "Warning!", "Failed to open the Img!");
+		close();
+		return;
+	}
+	exfatModel.addRootDevice(fileName,EXFTDRIVE);
+
+	
 	//ui.tv_main->setModel(&InModel);
 	//ui.tv_main->setRootIndex(InModel.index("C:"));
 	ui.tv_main->setModel(&exfatModel);
@@ -183,21 +195,31 @@ exfatDlg::~exfatDlg()
 
 }
 
+void exfatDlg::sltLoad()
+{
+
+}
+
 void exfatDlg::sltFormat()
 {
 #if USEXDISK==0
 	//qDebug() << "here";
-	QString fssizestr = QInputDialog::getText(this,tr("Input"),tr("New Filesystem Size(GB) between 32 and 64")).trimmed();
+	QString filename = QInputDialog::getText(this,tr("Input"),tr("New FileSystem File Name")).trimmed();
+	if(filename.isEmpty()){
+		QMessageBox::warning(this, tr("Name Err"), tr("FileName is Empty"),QMessageBox::Ok,QMessageBox::Ok);
+		return;
+	}
+	QString fssizestr = QInputDialog::getText(this,tr("Input"),tr("New Filesystem Size(GB) between 2 to 64")).trimmed();
 	int fssize = fssizestr.toInt();
-	if(fssize>=64 || fssize<=32){
-		QMessageBox::warning(this, tr("Num Err"), tr("Size Err,pls input a number between 32 and 64"),QMessageBox::Ok,QMessageBox::Ok);
+	if(fssize>=64 || fssize<=2){
+		QMessageBox::warning(this, tr("Num Err"), tr("Size Err,pls input a number between 2 to 64"),QMessageBox::Ok,QMessageBox::Ok);
 		return;
 	}
 	qint64 fssizeg = fssize * 1024;
 	fssizeg *= 1024LL * 1024LL;
 	DWORD nWritten = 0;
 
-	HANDLE hFile = CreateFileA("fhaha.img",GENERIC_WRITE|GENERIC_READ,          
+	HANDLE hFile = CreateFileA(filename.toStdString().c_str(),GENERIC_WRITE|GENERIC_READ,          
 		FILE_SHARE_READ|FILE_SHARE_WRITE,         
 		NULL,         
 		CREATE_ALWAYS,         
@@ -231,6 +253,7 @@ void exfatDlg::sltFormat()
 	WriteFile(hFile,         "\0",         1,         &nWritten,         NULL);     
 	SetEndOfFile(hFile);     
 	CloseHandle(hFile);
+	exfatModel.setFsFilename(filename);
 #endif
 	exfatModel.resetfs();
 }

@@ -78,4 +78,6 @@ EXPORTS
 	exfat_fix_invalid_node_checksum
 	exfat_fix_unknown_entry
 
-	set_dllexfat
+	set_ef
+	get_ef
+	mountFS

@@ -28,6 +28,7 @@ private:
 
 protected slots:
 	void sltFormat();
+	void sltLoad();
 	void sltEdit(bool);
 	void sltEdit(const QModelIndex &);
 	void sltAddDir(bool);

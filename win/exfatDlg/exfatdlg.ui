@@ -140,10 +140,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pb_Load</sender>
+   <signal>clicked()</signal>
+   <receiver>exfatDlgClass</receiver>
+   <slot>sltLoad()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>579</x>
+     <y>446</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>496</x>
+     <y>460</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>sltFormat()</slot>
   <slot>sltEdit(QModelIndex)</slot>
   <slot>sltContextMenu(QPoint)</slot>
+  <slot>sltLoad()</slot>
  </slots>
 </ui>

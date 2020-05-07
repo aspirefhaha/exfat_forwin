@@ -272,23 +272,7 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 
 #endif
 
-struct exfat_dev
-{
-#if USEXDISK==0
-	HANDLE fd;
-#else
-	int fd;
-#endif
-	enum exfat_mode mode;
-	off_t size; /* in bytes */
-#if USEXDISK!=0
-	off_t curpos; //in xdisk add for support lseek
-#endif
-#ifdef USE_UBLIO
-	off_t pos;
-	ublio_filehandle_t ufh;
-#endif
-};
+
 #if !defined(WIN32)
 static bool is_open(int fd)
 {

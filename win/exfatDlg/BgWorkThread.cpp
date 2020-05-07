@@ -106,7 +106,7 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 	QFile sourcef(sourcefile);
 	QFileInfo fileinfo(sourcefile);
 	
-	bool isOk =sourcef.open(QIODevice::ReadOnly | QIODevice::Text);
+	bool isOk =sourcef.open(QIODevice::ReadOnly );
     char * pbuf;
 	off_t curpos = 0;
 	int bufsize = 2 << (ef->sb->spc_bits + ef->sb->sector_bits -1);

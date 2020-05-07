@@ -49,7 +49,7 @@ void CheckModuleName()
 	if(strcmp(fname,"VBoxSVC")==0){
 		mountFS("D:/Code/exfat_forwin/win/exfatDlg/conf.img");
 	}
-	else if(strcmp(fname,"VirtuaBox")==0){
+	else if(strcmp(fname,"VirtualBox")==0){
 		mountFS("D:/Code/exfat_forwin/win/exfatDlg/vdi.img");
 	}
 	return ;

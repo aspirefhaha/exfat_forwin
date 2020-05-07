@@ -133,7 +133,23 @@ enum exfat_mode
 	EXFAT_MODE_ANY,
 };
 
-struct exfat_dev;
+struct exfat_dev
+{
+#if USEXDISK==1
+	HANDLE fd;
+#else
+	int fd;
+#endif
+	enum exfat_mode mode;
+	off_t size; /* in bytes */
+#if USEXDISK!=0
+	off_t curpos; //in xdisk add for support lseek
+#endif
+#ifdef USE_UBLIO
+	off_t pos;
+	ublio_filehandle_t ufh;
+#endif
+};
 
 struct exfat
 {

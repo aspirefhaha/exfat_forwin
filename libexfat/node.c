@@ -44,7 +44,7 @@ struct exfat_node* exfat_get_node(struct exfat_node* node)
 	/* if we switch to multi-threaded mode we will need atomic
 	   increment here and atomic decrement in exfat_put_node() */
 	node->references++;
-#if 1
+#if 0
 	exfat_utf16_to_utf8(tmpname,node->name,1024,exfat_utf16_length(node->name));
 	sprintf(tmpbuf,"get name: %s ref : %d\n",tmpname,node->references);
 	OutputDebugString(tmpbuf);
@@ -60,7 +60,7 @@ void exfat_put_node(struct exfat* ef, struct exfat_node* node)
 	char tmpbuf[1024]={0};
 #endif
 	--node->references;
-#if 1
+#if 0
 	exfat_utf16_to_utf8(tmpname,node->name,1024,exfat_utf16_length(node->name));
 	sprintf(tmpbuf,"put name: %s ref : %d\n",tmpname,node->references);
 	OutputDebugString(tmpbuf);

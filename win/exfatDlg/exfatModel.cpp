@@ -235,9 +235,9 @@ char* GBKToUTF8( const char* chGBK ){
 	char * pUTF8Buf=new char[dUTF8BufSize];  	
 	memset(pUTF8Buf, 0, dUTF8BufSize);  	
 	DWORD chgSize = WideCharToMultiByte( CP_UTF8,0,(LPCWSTR)pWideBuf,-1,pUTF8Buf,dUTF8BufSize,NULL,NULL); 	
-	char tmpstr[256];
-	sprintf(tmpstr,"widechartomb ret %d\n",chgSize);
-	OutputDebugString(tmpstr);
+	//char tmpstr[256];
+	//sprintf(tmpstr,"widechartomb ret %d\n",chgSize);
+	//OutputDebugString(tmpstr);
 	delete[]pWideBuf;	
 	return pUTF8Buf;
 }

@@ -302,6 +302,8 @@ EXFAT_EXPORT void set_ef(struct exfat * ief);
 EXFAT_EXPORT struct exfat * get_ef(void);
 
 EXFAT_EXPORT struct exfat * mountFS(const char * fspath);
+
+
 #ifdef __cplusplus
 }
 #endif

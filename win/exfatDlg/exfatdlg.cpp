@@ -309,6 +309,7 @@ void exfatDlg::sltDelete(bool sel)
 		struct exfat_node * pnode;
 		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
 			if(exfat_unlink(pItemData->m_pexfatRoot,pnode)==0){
+				exfat_put_node(pItemData->m_pexfatRoot,pnode);
 				exfat_cleanup_node(pItemData->m_pexfatRoot,pnode);
 				QMessageBox::information(this, selabsname, tr("Delete Ok!"),QMessageBox::Ok,QMessageBox::Ok);
 			}

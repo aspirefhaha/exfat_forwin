@@ -300,6 +300,7 @@ DWORD WorkerThread(LPVOID p)
 						memcpy(&offSeek,&cmdParams[8],sizeof(offSeek));
 						memcpy(&uMethod,&cmdParams[12],sizeof(uMethod));
 						long long offActual = -1;
+						WaitForSingleObject(ghMutex,INFINITE);
 						switch(uMethod){
 							case EFFILE_SEEK_BEGIN:
 								pnode->curpos = offSeek;
@@ -317,11 +318,14 @@ DWORD WorkerThread(LPVOID p)
 							default:
 								break;
 						}
+						ReleaseMutex(ghMutex);
 						do{
 							char backdata[TEA_EFFILESEEK]={0};
 							backdata[0]= TECMD_EFFileSeek;
 							memcpy(&backdata[1] ,&offActual,sizeof(offActual));
+							
 							sendret = send(sockConn, backdata, TEA_EFFILESEEK , 0);
+							
 						}while(0);
 					}
 					break;
@@ -347,8 +351,10 @@ DWORD WorkerThread(LPVOID p)
 							assert(-1);
 						}
 						unsigned char * pvBuf = (unsigned char *)malloc(cbToRead + TEA_EFFILEREAD);
+						WaitForSingleObject(ghMutex,INFINITE);
 						long long  retsize =  exfat_generic_pread(ef,pnode,pvBuf+TEA_EFFILEREAD,cbToRead,pnode->curpos);
 						pnode->curpos += retsize;
+						ReleaseMutex(ghMutex);
 						do{
 							pvBuf[0]= TECMD_EFFileRead;
 							memcpy(&pvBuf[1] ,&retsize,sizeof(retsize));
@@ -383,9 +389,10 @@ DWORD WorkerThread(LPVOID p)
 							curLen =  recv(sockConn,pvBuf+tmpRecvLen,cbToWrite-tmpRecvLen,0);
 							tmpRecvLen += curLen;
 						}
-						
+						WaitForSingleObject(ghMutex,INFINITE);
 						long long  retsize = exfat_generic_pwrite(ef,pnode,pvBuf,cbToWrite,pnode->curpos);
 						pnode->curpos += retsize;
+						ReleaseMutex(ghMutex);
 						do{
 							char backdata[TEA_EFFILEWRITE]={0};
 							backdata[0]= TECMD_EFFileWrite;
@@ -652,21 +659,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	return (int) msg.wParam;
 #endif
 	char tmpstr[MAX_LOADSTRING];
-	DWORD loadRet = GetPrivateProfileString(
-      "VBox",            // 节名
-      "Img",            // 键名，读取该键的值
-      "D:/Code/exfat_forwin/win/exfatDlg/vdi.img",            // 若指定的键不存在，该值作为读取的默认值
-      tmpstr,      // 一个指向缓冲区的指针，接收读取的字符串
-      MAX_LOADSTRING,                   // 指定lpReturnedString指向的缓冲区的大小
-	  "./VBox.ini"
-	);
-	ef = mountFS(tmpstr);
-
-	if(ef==NULL){
-		MessageBox(NULL,"Mount IMG  Err","Mount Err",MB_OK);
-		return -1;
-	}
-	MessageBox(NULL,tmpstr,"Mount Ok",MB_OK);
+	
 	//加载套接字库
 	WORD wVersionRequested;//用于保存WinSock库的版本号
 	WSADATA wsaData;
@@ -680,11 +673,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	if (err != 0)
 	{
 		sprintf_s(tmpstr,MAX_LOADSTRING,"WSAStartup() called failed!\n");OutputDebugString(tmpstr);
+		MessageBox(NULL,tmpstr,"Start Failed",MB_OK);
 		return -1;
 	}
 	else
 	{
 		sprintf_s(tmpstr,MAX_LOADSTRING,"WSAStartup() called successful!\n");OutputDebugString(tmpstr);
+		//MessageBox(NULL,tmpstr,"Start Failed",MB_OK);
 	}
  
 	if (LOBYTE(wsaData.wVersion) != 2 ||
@@ -700,11 +695,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	if(sockServer == INVALID_SOCKET)
 	{
 		sprintf_s(tmpstr,MAX_LOADSTRING,"socket() called failed! ,error code is: %d", WSAGetLastError());
+		MessageBox(NULL,tmpstr,"Start Failed",MB_OK);
 		return -1;
 	}
 	else
 	{
 		sprintf_s(tmpstr,MAX_LOADSTRING,"socket() called successful!\n");OutputDebugString(tmpstr);
+		//MessageBox(NULL,tmpstr,"Start Failed",MB_OK);
 	}
 	
 	//填充服务器端套接字结构
@@ -738,7 +735,22 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
  
 	SOCKADDR_IN addrClient;	//保存发送请求连接的客户端的套接字信息
 	int len = sizeof(SOCKADDR);
-	
+	DWORD loadRet = GetPrivateProfileString(
+      "VBox",            // 节名
+      "Img",            // 键名，读取该键的值
+      "D:/Code/exfat_forwin/win/exfatDlg/vdi.img",            // 若指定的键不存在，该值作为读取的默认值
+      tmpstr,      // 一个指向缓冲区的指针，接收读取的字符串
+      MAX_LOADSTRING,                   // 指定lpReturnedString指向的缓冲区的大小
+	  "./VBox.ini"
+	);
+	ef = mountFS(tmpstr);
+
+	if(ef==NULL){
+		MessageBox(NULL,"Mount IMG  Err","Mount Err",MB_OK);
+		return -1;
+	}
+	MessageBox(NULL,tmpstr,"Mount Ok",MB_OK);
+	MessageBox(NULL,"Close This Dialog Now","Start Server Ok",MB_OK);
 	while(1)
 	{
 		//等待客户请求到来

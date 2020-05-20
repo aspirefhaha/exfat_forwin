@@ -431,6 +431,7 @@ QVariant ExfatModel::data(const QModelIndex & index,
 
 int ExfatModel::formatfs(const char * spec)
 {
+
 	struct exfat_dev * dev = exfat_open(spec, EXFAT_MODE_RW);
 	if (dev == NULL)
 		return 1;
@@ -441,7 +442,6 @@ int ExfatModel::formatfs(const char * spec)
 	}
 	if (exfat_close(dev) != 0)
 		return 1;
-	
 	addRootDevice(m_FSFileName,EXFTDRIVE);
 	return 0;
 }

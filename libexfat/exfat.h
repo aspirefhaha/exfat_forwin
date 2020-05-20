@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <time.h>
 #if defined(WIN32) || defined(__WIN__)
+#include <Windows.h>
 #if _MSC_VER < 1900
 #include "../win/libexfat/stdbool.h"
 #ifndef _CRT_NO_TIME_T

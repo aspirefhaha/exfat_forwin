@@ -9,7 +9,7 @@
 #pragma comment(lib,"mkfs.lib")
 #endif
 #include <qdebug.h>
-
+#include "exfatModel.h"
 #include "exnotepad.h"
 exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),exfatModel(this),dia(this),bgcopyTh(this),m_progesssize(0)
@@ -17,6 +17,7 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	ui.setupUi(this);
 	setAcceptDrops(true);
 	//InModel.setRootPath("C:");
+#if USEXDISK==0
 	QString fileName = QFileDialog::getOpenFileName(
 		this, 
 		tr("open a file."),
@@ -28,7 +29,9 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 		return;
 	}
 	exfatModel.addRootDevice(fileName,EXFTDRIVE);
-
+#else
+	exfatModel.addRootDevice(XDISKDEFAULTKEY,EXFTDRIVE);
+#endif
 	
 	//ui.tv_main->setModel(&InModel);
 	//ui.tv_main->setRootIndex(InModel.index("C:"));
@@ -255,6 +258,7 @@ void exfatDlg::sltFormat()
 	CloseHandle(hFile);
 	exfatModel.setFsFilename(filename);
 #endif
+	exfatModel.setFsFilename(QString(XDISKDEFAULTKEY));
 	exfatModel.resetfs();
 }
 

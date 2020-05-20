@@ -72,6 +72,7 @@ static void xdisk_init()
 			return;
 		}
 		OutputDebugString("Load xDiskInterface.dll Ok\n");
+		MessageBox(NULL,"Load xDiskInterface.dll Ok","Load",MB_OK);
 		pOpenXDisk = (API_OpenXDisk)GetProcAddress(glibXDisk,"OpenXDisk");
 		if(pOpenXDisk==NULL){
 			OutputDebugString("Get OpenXDisk Failed!!!!!!!!!!!\n");
@@ -117,7 +118,7 @@ int fsync(int fd)
 	//sync();
 	return 0;
 }
-#if USEXDISK==0
+#if USEXDISK==1
 #define XDISKSECSIZE 512
 #define XDISKCURTOTALSIZE (50000LL*1024LL*1024L)
 #endif
@@ -282,6 +283,7 @@ static bool is_open(int fd)
 static HANDLE open_ro(const char* spec)
 {
 #ifdef WIN32
+	OutputDebugString("open ro\n");
 #if USEXDISK
 	xdisk_init();
 	if(glibXDisk!=NULL){
@@ -299,6 +301,7 @@ static HANDLE open_ro(const char* spec)
 static HANDLE open_rw(const char* spec)
 {
 #ifdef WIN32
+	OutputDebugString("open rw\n");
 #if USEXDISK
 	xdisk_init();
 	if(glibXDisk!=NULL){

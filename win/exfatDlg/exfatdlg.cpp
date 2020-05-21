@@ -12,9 +12,15 @@
 #include "exfatModel.h"
 #include "exnotepad.h"
 
-    #ifdef linux
-	typedef int DWORD;
-	#endif
+
+#ifdef linux
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+typedef int DWORD;
+#endif
 exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),exfatModel(this),dia(this),bgcopyTh(this),m_progesssize(0)
 {
@@ -227,7 +233,32 @@ void exfatDlg::sltFormat()
 	qint64 fssizeg = fssize * 1024;
 	fssizeg *= 1024LL * 1024LL;
 #if linux
-	//TODO
+#if 0
+	QFile fp;
+	fp.setFileName(filename);
+	fp.open(QIODevice::WriteOnly | QIODevice::Truncate );
+	fp.seek(fssizeg);
+	fp.write("\0");
+	fp.flush();
+	fp.close();
+#else
+	int fd = open(filename.toStdString().c_str(),O_WRONLY | O_CREAT | O_TRUNC ,0777);
+	if( -1 == fd){
+		perror("create file fail");
+		return ;
+	}
+	printf("create file %s success\n",filename.toStdString().c_str());
+	long long ret = lseek(fd,fssizeg,SEEK_END);
+	if( -1 == ret){
+		perror("lseek file fail");
+		return;
+	}
+	ret = write(fd,"\0",1);
+	if(ret != 1){
+		perror("write 1 byte failed!");
+	}
+	::close(fd);
+#endif
 #else
 	//qDebug() << "here";
 	Q
@@ -271,9 +302,10 @@ void exfatDlg::sltFormat()
 #endif
 
 	exfatModel.setFsFilename(filename);
-#endif
+#else
 	QString tmpQStr = XDISKDEFAULTKEY;
 	exfatModel.setFsFilename(tmpQStr);
+#endif
 	exfatModel.resetfs();
 }
 

@@ -11,6 +11,10 @@
 #include <qdebug.h>
 #include "exfatModel.h"
 #include "exnotepad.h"
+
+    #ifdef linux
+	typedef int DWORD;
+	#endif
 exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),exfatModel(this),dia(this),bgcopyTh(this),m_progesssize(0)
 {
@@ -176,8 +180,11 @@ void exfatDlg::dropEvent(QDropEvent * event)
 			QList<QString> selfiles ;
 			selfiles << fileName;
 			bgcopyTh.setSelPath(selfiles);
-			if(pItemData->fstype==EXFTDRIVE)
-				bgcopyTh.setTarget(QString("/"));
+			if(pItemData->fstype==EXFTDRIVE){
+				QString tmpStr = "/";
+
+				bgcopyTh.setTarget(tmpStr);
+			}
 			else
 				bgcopyTh.setTarget(pItemData->absPath);
 			bgcopyTh.setExfat(pItemData->m_pexfatRoot);
@@ -206,7 +213,6 @@ void exfatDlg::sltLoad()
 void exfatDlg::sltFormat()
 {
 #if USEXDISK==0
-	//qDebug() << "here";
 	QString filename = QInputDialog::getText(this,tr("Input"),tr("New FileSystem File Name")).trimmed();
 	if(filename.isEmpty()){
 		QMessageBox::warning(this, tr("Name Err"), tr("FileName is Empty"),QMessageBox::Ok,QMessageBox::Ok);
@@ -220,6 +226,11 @@ void exfatDlg::sltFormat()
 	}
 	qint64 fssizeg = fssize * 1024;
 	fssizeg *= 1024LL * 1024LL;
+#if linux
+	//TODO
+#else
+	//qDebug() << "here";
+	Q
 	DWORD nWritten = 0;
 
 	HANDLE hFile = CreateFileA(filename.toStdString().c_str(),GENERIC_WRITE|GENERIC_READ,          
@@ -256,9 +267,13 @@ void exfatDlg::sltFormat()
 	WriteFile(hFile,         "\0",         1,         &nWritten,         NULL);     
 	SetEndOfFile(hFile);     
 	CloseHandle(hFile);
+
+#endif
+
 	exfatModel.setFsFilename(filename);
 #endif
-	exfatModel.setFsFilename(QString(XDISKDEFAULTKEY));
+	QString tmpQStr = XDISKDEFAULTKEY;
+	exfatModel.setFsFilename(tmpQStr);
 	exfatModel.resetfs();
 }
 
@@ -304,12 +319,12 @@ void exfatDlg::sltDelete(bool sel)
 		ui.tv_main->collapse(parent);
 		ui.tv_main->expand(parent);
 		
-		char selfilename[MAX_PATH]={0};
+		char selfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 		QString selabsname ;
 		selabsname = pItemData->absPath;
 
 				
-		exfat_utf16_to_utf8(selfilename,(const le16_t *)selabsname.data(),MAX_PATH,selabsname.length());
+		exfat_utf16_to_utf8(selfilename,(const le16_t *)selabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,selabsname.length());
 		struct exfat_node * pnode;
 		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
 			if(exfat_unlink(pItemData->m_pexfatRoot,pnode)==0){
@@ -337,8 +352,8 @@ void exfatDlg::sltRename(bool sel)
 		ui.tv_main->expand(parent);
 		QString dirname = QInputDialog::getText(this,tr("Input"),tr("New Name")).trimmed();
 		if(!dirname.isEmpty()){
-			char newdirname[MAX_PATH]={0};
-			char olddirname[MAX_PATH]={0};
+			char newdirname[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+			char olddirname[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 			QString newabsname ;
 			QString oldabsname;
 			dirname.replace("/" ,"");
@@ -357,8 +372,8 @@ void exfatDlg::sltRename(bool sel)
 				newabsname.append( "/");
 				newabsname.append( dirname);	
 			}
-			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),MAX_PATH,newabsname.length());
-			exfat_utf16_to_utf8(olddirname,(const le16_t *)oldabsname.data(),MAX_PATH,oldabsname.length());
+			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,newabsname.length());
+			exfat_utf16_to_utf8(olddirname,(const le16_t *)oldabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,oldabsname.length());
 			if(exfat_rename(pItemData->m_pexfatRoot,olddirname,newdirname)!=0){
 				QMessageBox::warning(this, tr("Rename Err"), tr("Rename Failed!"),QMessageBox::Ok,QMessageBox::Ok);
 			}
@@ -382,7 +397,7 @@ void exfatDlg::sltAddDir(bool sel)
 		ui.tv_main->expand(parent);
 		QString dirname = QInputDialog::getText(this,tr("Input"),tr("New Dir Name")).trimmed();
 		if(!dirname.isEmpty()){
-			char newdirname[MAX_PATH]={0};
+			char newdirname[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 			QString newabsname ;
 			dirname.replace("/" ,"");
 			dirname = dirname.trimmed();
@@ -393,7 +408,7 @@ void exfatDlg::sltAddDir(bool sel)
 			else{
 				newabsname = pItemData->absPath + "/" + dirname;	
 			}
-			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),MAX_PATH,newabsname.length());
+			exfat_utf16_to_utf8(newdirname,(const le16_t *)newabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,newabsname.length());
 			if(exfat_mkdir(pItemData->m_pexfatRoot,newdirname)!=0){
 				QMessageBox::warning(this, tr("Create Err"), tr("Create Dir Failed!"),QMessageBox::Ok,QMessageBox::Ok);
 			}

@@ -53,10 +53,14 @@ On OpenBSD:
 * autoconf (set AUTOCONF_VERSION environment variable)
 * automake (set AUTOMAKE_VERSION environment variable)
 
+If want to Compile qtdlg branch
+     sudo apt-get install libqt4-dev qt4-designer
+
 Get the source code, change directory and compile:
 
     git clone https://github.com/relan/exfat.git
     cd exfat
+    sudo apt install autoconf automake libfuse-dev(for ubuntu 18.04)
     autoreconf --install
     ./configure
     make

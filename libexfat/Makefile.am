@@ -21,6 +21,7 @@
 #
 
 noinst_LIBRARIES = libexfat.a
+libexfat_a_CFLAGS = -DUSEXDISK=0
 libexfat_a_SOURCES = \
 	byteorder.h \
 	cluster.c \

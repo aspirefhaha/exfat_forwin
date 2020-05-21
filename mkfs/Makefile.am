@@ -20,9 +20,13 @@
 #	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-sbin_PROGRAMS = mkexfatfs
-dist_man8_MANS = mkexfatfs.8
-mkexfatfs_SOURCES = \
+#sbin_PROGRAMS = mkexfatfs
+noinst_LIBRARIES = libmkfs.a
+#dist_man8_MANS = mkexfatfs.8
+libmkfs_a_CFLAGS = -DUSEXDISK=0
+#mkexfatfs_SOURCES = 
+
+libmkfs_a_SOURCES = \
 	cbm.c \
 	cbm.h \
 	fat.c \
@@ -38,11 +42,15 @@ mkexfatfs_SOURCES = \
 	uctc.h \
 	vbr.c \
 	vbr.h
-mkexfatfs_CPPFLAGS = -I$(top_srcdir)/libexfat
-mkexfatfs_LDADD = ../libexfat/libexfat.a
 
-install-exec-hook:
-	ln -sf $(sbin_PROGRAMS) $(DESTDIR)$(sbindir)/mkfs.exfat
+libmkfs_a_CPPFLAGS = -I$(top_srcdir)/libexfat
 
-uninstall-hook:
-	rm -f $(DESTDIR)$(sbindir)/mkfs.exfat
+
+#mkexfatfs_CPPFLAGS = -I$(top_srcdir)/libexfat
+#mkexfatfs_LDADD = ../libexfat/libexfat.a
+
+#install-exec-hook:
+#	ln -sf $(sbin_PROGRAMS) $(DESTDIR)$(sbindir)/mkfs.exfat
+
+#uninstall-hook:
+#	rm -f $(DESTDIR)$(sbindir)/mkfs.exfat

@@ -3,14 +3,14 @@
 ######################################################################
 
 TEMPLATE = app
-TARGET = 
+TARGET = exfatDlg
 #QMAKE_LFLAGS *= /MACHINE:X64
-DEFINES += "_MBCS"
+DEFINES += "_MBCS" USEXDISK=0
 DEPENDPATH += . GeneratedFiles
-INCLUDEPATH += . 
+INCLUDEPATH += . ../../libexfat
 
 #LIBS += -L../InEnvDirPlugin/debug 
-
+LIBS += -L../../libexfat -lexfat -L../../mkfs -lmkfs
 !contains(QMAKE_TARGET.arch, x86_64) {
     message("x64 build")
     ## Windows x64 (64bit) specific build here       
@@ -19,7 +19,7 @@ INCLUDEPATH += .
     ## Windows x86 (32bit) specific build here
 }
 # Input
-HEADERS += exfatdlg.h exfatModel.h
+HEADERS += exfatdlg.h exfatModel.h exnotepad.h BgWorkThread.h
 FORMS += exfatdlg.ui \
           exnotepad.ui
 SOURCES += exfatdlg.cpp \

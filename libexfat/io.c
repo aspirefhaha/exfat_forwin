@@ -279,7 +279,11 @@ static bool is_open(int fd)
 {
 	return fcntl(fd, F_GETFD) != -1;
 }
+
+#define HANDLE int
+#define INVALID_HANDLE_VALUE -1
 #endif
+
 static HANDLE open_ro(const char* spec)
 {
 #ifdef WIN32
@@ -519,9 +523,15 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		//dev->size = exfat_seek(dev, 0, SEEK_END);
 #else
 		//dev->size = exfat_seek(dev, 0, SEEK_END);
-		struct _stat64 statbuf;
-		//fstat(dev->fd,(struct stat *)&statbuf);
+		
+		
+#ifdef WIN32
+		struct _stat64 statbuf;		
 		_fstat64(dev->fd, &statbuf);
+#else
+		struct stat statbuf;
+		fstat(dev->fd,(struct stat *)&statbuf);
+#endif
 		dev->size = statbuf.st_size;
 #endif
 		if (dev->size <= 0)

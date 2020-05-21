@@ -10,8 +10,12 @@
 #include <qdebug.h>
 #include "exnotepad.h"
 #include <qfileiconprovider.h>
-
+#if linux
+#define OutputDebugString(kkk) fprintf(stderr,kkk)
+#define DWORD int
+#else
 #include <Windows.h>
+#endif
 extern "C"{
 	#include "../../mkfs/mkexfat.h"
 }
@@ -67,20 +71,20 @@ ExfatFSPrivate * ExfatModel::findOutFSChild(QString abspath,EXFATITEMTYPE type) 
 	return NULL;
 }
 
-BOOL ExfatModel::isDirectory(const char * dirpath)
+bool ExfatModel::isDirectory(const char * dirpath)
 {
 #if 0
 	if(pFunc){
 		WIN32_FILE_ATTRIBUTE_DATA wfad;
 		BOOL tRet = pFunc->GetFileAttributesEx(dirpath,GetFileExInfoStandard,&wfad);
 		if(!tRet){
-			return FALSE;
+			return false;
 		}
 		return wfad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 
 	}
 #endif
-	return FALSE;
+	return false;
 }
 
 QModelIndex ExfatModel::index(int row, int column,
@@ -109,7 +113,7 @@ QModelIndex ExfatModel::index(int row, int column,
 			case EXFTDRIVE:
 				{
 					//根据路径，row行数,返回绝对路径和类型
-					char lpPath[MAX_PATH] = {0};
+					char lpPath[EXFAT_UTF8_NAME_BUFFER_MAX] = {0};
 					struct exfat * ef = parentItemPtr->m_pexfatRoot;
 					struct exfat_node * pparentnode = exfat_get_node(ef->root);
 					struct exfat_node * node = NULL;
@@ -130,7 +134,7 @@ QModelIndex ExfatModel::index(int row, int column,
 								else {
 									childType = EXFTFILE;
 								}
-								int len = lstrlenW((LPCWSTR)&node->name);
+								int len = exfat_utf16_length((const le16_t *)&node->name);
 								childPath = QString("/") +QString::fromUtf16((const  unsigned short *)&node->name,len);
 
 								exfat_put_node(ef, node);
@@ -160,14 +164,14 @@ QModelIndex ExfatModel::index(int row, int column,
 			case EXFTDIR:
 				{
 					//根据路径，row行数,返回绝对路径和类型
-					char lpPath[MAX_PATH] = {0};
+					char lpPath[EXFAT_UTF8_NAME_BUFFER_MAX] = {0};
 					int len = 0;
 					struct exfat_node * pparentnode = NULL;
 					struct exfat * ef = parentItemPtr->m_pexfatRoot;
 					struct exfat_node * node = NULL;
 					int rc = 0;
 					int searchidx = 0;
-					exfat_utf16_to_utf8(lpPath,(const le16_t *)parentItemPtr->absPath.data(),MAX_PATH,parentItemPtr->absPath.length());
+					exfat_utf16_to_utf8(lpPath,(const le16_t *)parentItemPtr->absPath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,parentItemPtr->absPath.length());
 					rc = exfat_lookup(ef,&pparentnode,lpPath);
 					
 					if(rc == 0){
@@ -178,7 +182,7 @@ QModelIndex ExfatModel::index(int row, int column,
 						while ((node = exfat_readdir(&it)))
 						{
 							if(row == searchidx){
-								int len = lstrlenW((LPCWSTR)&node->name);
+								int len = exfat_utf16_length((const le16_t *)&node->name);
 								QString filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
 								if(node->attrib & EXFAT_ATTRIB_DIR){
 									childType = EXFTDIR;
@@ -225,7 +229,8 @@ QModelIndex ExfatModel::index(int row, int column,
     return QModelIndex();
 
 }
-
+#if linux
+#else
 char* GBKToUTF8( const char* chGBK ){	
 	DWORD dWideBufSize=MultiByteToWideChar(CP_ACP, 0,(LPCSTR)chGBK,-1, NULL, 0);  	
 	wchar_t * pWideBuf=new wchar_t[dWideBufSize];  	
@@ -241,6 +246,7 @@ char* GBKToUTF8( const char* chGBK ){
 	delete[]pWideBuf;	
 	return pUTF8Buf;
 }
+#endif
 
 void ExfatModel::editFile(const QString&)
 {
@@ -250,6 +256,8 @@ void ExfatModel::editFile(const QString&)
 
 QVariant ExfatModel::headerData(int section, Qt::Orientation orientation, int role ) const
 {
+
+	QString returnValue;
 	switch (role) {
     case Qt::DecorationRole:
         if (section == 0) {
@@ -267,7 +275,6 @@ QVariant ExfatModel::headerData(int section, Qt::Orientation orientation, int ro
 
     if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
         return QAbstractItemModel::headerData(section, orientation, role);
-	QString returnValue;
     switch (section) {
     case 0: returnValue = tr("Name");
             break;
@@ -349,12 +356,12 @@ QVariant ExfatModel::data(const QModelIndex & index,
 				QString filesize = "0";
 				QString filetype = tr("File");
 				QString filelastmodifytime = "1980-01-01 00::00::00";
-				char utf8str[MAX_PATH]={0};
-				exfat_utf16_to_utf8(utf8str,(const le16_t *)fspath.data(),MAX_PATH,fspath.length());
+				char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+				exfat_utf16_to_utf8(utf8str,(const le16_t *)fspath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,fspath.length());
 				int rc = exfat_lookup(selPtr->m_pexfatRoot,&node,(const char *)&utf8str);
 				do{
 					if(rc ==0){
-						char utf8str[MAX_PATH]={0};
+						char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 						int len = 0;
 						if(node->attrib & EXFAT_ATTRIB_DIR){
 							filetype=tr("Dir");
@@ -367,7 +374,7 @@ QVariant ExfatModel::data(const QModelIndex & index,
 							
 						}
 						filelastmodifytime = QDateTime::fromTime_t(node->mtime).toString("yyyy-MM-dd hh:mm:ss");
-						len = lstrlenW((LPCWSTR)&node->name);
+						len = exfat_utf16_length((const le16_t *)&node->name);
 						filename = QString::fromUtf16((const  unsigned short *)&node->name,len);
 						exfat_put_node(selPtr->m_pexfatRoot,node);
 					}
@@ -543,13 +550,13 @@ void ExfatModel::refreshRootDevice()
 #endif
 }
 
-BOOL ExfatModel::isRootItem(ExfatFSPrivate * priv) const
+bool ExfatModel::isRootItem(ExfatFSPrivate * priv) const
 {
-	BOOL isrootitem = FALSE;
+	bool isrootitem = false;
 	QList<ExfatFSPrivate*>::const_iterator litem = m_rootDrives.begin();
 	while(litem != m_rootDrives.end()){
 		if((*litem)->match(priv->absPath, priv->fstype)){
-			isrootitem = TRUE;
+			isrootitem = true;
 			break;
 		}
 		litem++;
@@ -619,9 +626,9 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 				int rc;
 				struct exfat * ef = parentData->m_pexfatRoot;
 				struct exfat_node * pdir ;
-				char utf8str[MAX_PATH]={0};
+				char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 				OutputDebugString("in dir rowCount\n");
-				exfat_utf16_to_utf8(utf8str,(const le16_t *)parentData->absPath.data(),MAX_PATH,parentData->absPath.length());
+				exfat_utf16_to_utf8(utf8str,(const le16_t *)parentData->absPath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,parentData->absPath.length());
 				rc = exfat_lookup(ef,&pdir,utf8str);
 				if(rc!=0)
 					return 0;

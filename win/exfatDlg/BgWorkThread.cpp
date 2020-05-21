@@ -1,5 +1,7 @@
 #include "BgWorkThread.h"
+#ifdef WIN32
 #include <windows.h>
+#endif
 #include <QtCore>
 #include <QMessageBox>
 
@@ -65,14 +67,14 @@ void BgWorkThread::run()
 quint64 BgWorkThread::CopyDirToExfat(QString &sourcedir,QString & targetdir,quint64 cursize)
 {
 	QFileInfo fileinfo(sourcedir);
-	char utf8str[MAX_PATH]={0};
+	char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 	
 	QString targetdirname ;
 	if(targetdir.endsWith("/"))
 		targetdirname = targetdir + fileinfo.fileName();
 	else
 		targetdirname = targetdir + "/" + fileinfo.fileName();
-	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetdirname.data(),MAX_PATH,targetdirname.length());
+	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetdirname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,targetdirname.length());
 	if(exfat_mkdir(ef,utf8str)!=0){
 		QString msgErr = QString(tr("Create Dir %1 Failed")).arg(targetdirname);
 		
@@ -110,7 +112,7 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
     char * pbuf;
 	off_t curpos = 0;
 	int bufsize = 2 << (ef->sb->spc_bits + ef->sb->sector_bits -1);
-	char utf8str[MAX_PATH]={0};
+	char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 	QString targetfilename ;
 	if(targetdir == "/" ){
 		targetfilename = "/" + fileinfo.fileName();
@@ -118,7 +120,7 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 	else{
 		targetfilename = targetdir + "/" + fileinfo.fileName();
 	}
-	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetfilename.data(),MAX_PATH,targetfilename.length());
+	exfat_utf16_to_utf8(utf8str,(const le16_t *)targetfilename.data(),EXFAT_UTF8_NAME_BUFFER_MAX,targetfilename.length());
     int mknoderet = exfat_mknod(ef,utf8str);
 	if(mknoderet==0){
 		struct exfat_node * node;
@@ -161,14 +163,15 @@ int BgWorkThread::CopyFilesToOuter(QList<QPair<QString,QString>> & copyitems)
 	QPair<QString,QString> copyitem;
 	foreach(copyitem,copyitems){
 		QFileInfo fileinfo(copyitem.first);
-		char outpath[MAX_PATH]={0};
-		char tmpdirname[MAX_PATH]={0};
+		char outpath[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+		char tmpdirname[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 		strcpy(tmpdirname,copyitem.second.toLocal8Bit().data());
 		int rootlen = strlen(tmpdirname);
 		strcpy(tmpdirname,copyitem.first.toLocal8Bit().data());
-		char * pdirname = tmpdirname + rootlen;
-		sprintf_s(outpath,MAX_PATH,"%s/%s",m_outtertarget.toStdString().c_str(),pdirname);
+		
 #if 0
+		char * pdirname = tmpdirname + rootlen;
+		sprintf_s(outpath,EXFAT_UTF8_NAME_BUFFER_MAX,"%s/%s",m_outtertarget.toStdString().c_str(),pdirname);
 		if(fileinfo.isDir()){
 			BOOL tExist = ExfatModel::pFunc->PathFileExists(outpath);
 			if(!tExist){
@@ -284,17 +287,19 @@ qlonglong BgWorkThread::getOutSubItemSize(QString &abspath)
 size_t BgWorkThread::getFileDirSize(const char * abspath)
 {
 	size_t totalsize = 0;
-	WIN32_FILE_ATTRIBUTE_DATA wfad;
-	if(strlen(abspath)>=MAX_PATH)
+	if(strlen(abspath)>=EXFAT_UTF8_NAME_BUFFER_MAX)
 		return 0;
+
 #if 0
+
+	WIN32_FILE_ATTRIBUTE_DATA wfad;
 	BOOL tRet = ExfatModel::pFunc->GetFileAttributesEx(abspath,GetFileExInfoStandard,&wfad);
 	if(!tRet){
 		return 0;
 	}
 	if(wfad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY){
-		char tmppath[MAX_PATH];
-		strcpy_s(tmppath,MAX_PATH,abspath);
+		char tmppath[EXFAT_UTF8_NAME_BUFFER_MAX];
+		strcpy_s(tmppath,EXFAT_UTF8_NAME_BUFFER_MAX,abspath);
 		int len = strlen(tmppath);
 		if(tmppath[len-1]!='/')
 		{
@@ -326,7 +331,7 @@ size_t BgWorkThread::getFileDirSize(const char * abspath)
 					isFinished = (ExfatModel::pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
 					continue;  
 				} 
-				char subAbsPath[MAX_PATH];
+				char subAbsPath[EXFAT_UTF8_NAME_BUFFER_MAX];
 				sprintf(subAbsPath,"%s/%s",abspath,fd.cFileName);
 				totalsize += getFileDirSize(subAbsPath);
 				emit updateSize(totalsize);

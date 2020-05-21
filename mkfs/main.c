@@ -240,6 +240,28 @@ static void usage(const char* prog)
 	exit(1);
 }
 #if 0
+int setup(struct exfat_dev* dev, int sector_bits, int spc_bits,
+		const char* volume_label, uint32_t volume_serial,
+		uint64_t first_sector)
+{
+	param.sector_bits = sector_bits;
+	param.first_sector = first_sector;
+	param.volume_size = exfat_get_size(dev);
+
+	param.spc_bits = setup_spc_bits(sector_bits, spc_bits, param.volume_size);
+	if (param.spc_bits == -1)
+		return 1;
+
+	if (setup_volume_label(param.volume_label, volume_label) != 0)
+		return 1;
+
+	param.volume_serial = setup_volume_serial(volume_serial);
+	if (param.volume_serial == 0)
+		return 1;
+
+	return mkfs(dev, param.volume_size);
+}
+
 int main(int argc, char* argv[])
 {
 	const char* spec = NULL;

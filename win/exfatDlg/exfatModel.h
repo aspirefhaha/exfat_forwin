@@ -6,7 +6,10 @@ extern "C"{
 }
 #include <QAbstractItemModel>
 #include <qthread.h>
+#ifdef WIN32
 #include <Windows.h>
+#endif
+#include <QtCore>
 #if USEXDISK==0
 #define XDISKDEFAULTKEY	"fhaha.img"
 #else
@@ -74,10 +77,9 @@ public:
 	void refreshRootDevice();
 	void editFile(const QString&);
 	const static int ONCEBLOCK = 512;
-	
-	
-	BOOL isDirectory(const char * dirpath);
-	BOOL isRootItem(ExfatFSPrivate * priv)const;
+
+	bool isDirectory(const char * dirpath);
+	bool isRootItem(ExfatFSPrivate * priv)const;
 
 	void notifyChange(const QModelIndex & someindex,const QModelIndex &rbindex){
 		emit dataChanged(someindex,rbindex);

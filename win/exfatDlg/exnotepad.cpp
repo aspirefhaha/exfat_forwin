@@ -13,8 +13,8 @@ exNotepad::exNotepad(ExfatFSPrivate*exinfo ,QWidget *parent)
     setWindowModality(Qt::WindowModal);
 	struct exfat * ef = m_pexinfo->m_pexfatRoot;
 	struct exfat_node * node ;
-	char utf8str[MAX_PATH]={0};
-	exfat_utf16_to_utf8(utf8str,(const le16_t *)m_pexinfo->absPath.data(),MAX_PATH,exinfo->absPath.length());
+	char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+	exfat_utf16_to_utf8(utf8str,(const le16_t *)m_pexinfo->absPath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,exinfo->absPath.length());
 	int lookupret = exfat_lookup(ef,&node,utf8str);
 	if(lookupret == 0){
 		unsigned char * buf = (unsigned char *)malloc(node->size+1);
@@ -41,8 +41,8 @@ void exNotepad::sltSave()
 	//text.replace(QString("\n"), QString("\r\n"));
 	if(m_pexinfo != NULL){
 		struct exfat * ef = m_pexinfo->m_pexfatRoot;
-		char utf8str[MAX_PATH]={0};
-		exfat_utf16_to_utf8(utf8str,(const le16_t *)m_pexinfo->absPath.data(),MAX_PATH,m_pexinfo->absPath.length());
+		char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+		exfat_utf16_to_utf8(utf8str,(const le16_t *)m_pexinfo->absPath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,m_pexinfo->absPath.length());
 		struct exfat_node * node ;
 		int lookupret = exfat_lookup(ef,&node,utf8str);
 		if(lookupret == 0){

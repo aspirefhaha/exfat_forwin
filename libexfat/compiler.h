@@ -61,7 +61,12 @@
 #endif
 
 #ifdef USE_C11_STATIC_ASSERT
+#ifdef __cplusplus
+#define STATIC_ASSERT(cond) static_assert(cond, #cond)
+#else
+
 #define STATIC_ASSERT(cond) _Static_assert(cond, #cond)
+#endif
 #else
 #define CONCAT2(a, b) a ## b
 #define CONCAT1(a, b) CONCAT2(a, b)

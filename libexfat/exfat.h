@@ -23,7 +23,9 @@
 
 #ifndef EXFAT_H_INCLUDED
 #define EXFAT_H_INCLUDED
-
+#ifndef WIN32
+#define EXFAT_EXPORT 
+#else
 #ifdef DLL_EXPORTS
 
 #define EXFAT_EXPORT	__declspec(dllexport)
@@ -32,6 +34,7 @@
 
 #define EXFAT_EXPORT __declspec(dllimport)
 
+#endif
 #endif
 
 #ifndef ANDROID

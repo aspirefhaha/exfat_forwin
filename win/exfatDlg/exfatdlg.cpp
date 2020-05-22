@@ -261,7 +261,6 @@ void exfatDlg::sltFormat()
 #endif
 #else
 	//qDebug() << "here";
-	Q
 	DWORD nWritten = 0;
 
 	HANDLE hFile = CreateFileA(filename.toStdString().c_str(),GENERIC_WRITE|GENERIC_READ,          

@@ -305,7 +305,9 @@ static HANDLE open_ro(const char* spec)
 static HANDLE open_rw(const char* spec)
 {
 #ifdef WIN32
-	OutputDebugString("open rw\n");
+#ifdef _DEBUG
+	//OutputDebugString("open rw\n");
+#endif
 #if USEXDISK
 	xdisk_init();
 	if(glibXDisk!=NULL){
@@ -314,7 +316,7 @@ static HANDLE open_rw(const char* spec)
 	}
 	return INVALID_HANDLE_VALUE;//
 #else
-	int fd = open(spec, O_RDWR | O_BINARY);
+	int fd = open(spec, O_RDWR );
 	return (HANDLE)fd;
 #endif
 #else

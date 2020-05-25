@@ -316,7 +316,7 @@ static HANDLE open_rw(const char* spec)
 	}
 	return INVALID_HANDLE_VALUE;//
 #else
-	int fd = open(spec, O_RDWR );
+	int fd = open(spec, O_RDWR | O_BINARY );
 	return (HANDLE)fd;
 #endif
 #else

@@ -784,10 +784,12 @@ static int erase_entries(struct exfat* ef, struct exfat_node* dir, int n,
 	for (i = 0; i < n; i++)
 		entries[i].type &= ~EXFAT_ENTRY_VALID;
 	
+
+	rc =  write_entries(ef, dir, entries, n, offset);
 #ifdef WIN32
 	free(entries);
 #endif
-	return write_entries(ef, dir, entries, n, offset);
+	return rc;
 }
 
 static int erase_node(struct exfat* ef, struct exfat_node* node)

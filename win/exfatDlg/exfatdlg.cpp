@@ -1,5 +1,6 @@
 #include "exfatdlg.h"
 
+#include <stdio.h>
 #include <QtGui>
 #ifdef _DEBUG
 #pragma comment(lib,"libexfat.lib")
@@ -11,14 +12,21 @@
 #include <qdebug.h>
 #include "exfatModel.h"
 #include "exnotepad.h"
-
-
-#ifdef linux
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
+#ifdef WIN32
+#ifndef _UNISTD_H
+#define _UNISTD_H
+#include <io.h>
+#include <process.h>
+#endif /* _UNISTD_H */
+#include <Error.h>
+#include <stdlib.h>
+#include <string.h>
+#endif
+
+#ifdef linux
 typedef int DWORD;
 #endif
 exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
@@ -260,7 +268,7 @@ void exfatDlg::sltFormat()
 	::close(fd);
 #endif
 #else
-	//qDebug() << "here";
+#if 0
 	DWORD nWritten = 0;
 
 	HANDLE hFile = CreateFileA(filename.toStdString().c_str(),GENERIC_WRITE|GENERIC_READ,          
@@ -297,6 +305,25 @@ void exfatDlg::sltFormat()
 	WriteFile(hFile,         "\0",         1,         &nWritten,         NULL);     
 	SetEndOfFile(hFile);     
 	CloseHandle(hFile);
+#else
+	int fd = open(filename.toStdString().c_str(),O_WRONLY | O_CREAT | O_TRUNC ,0777);
+	if( -1 == fd){
+		perror("create file fail");
+		return ;
+	}
+	printf("create file %s success\n",filename.toStdString().c_str());
+	long long ret = _lseeki64(fd,fssizeg,SEEK_END);
+	if( -1 == ret){
+		char tmperr[250]={0};
+		OutputDebugStringA(strerror(errno));
+		return;
+	}
+	ret = write(fd,"\0",1);
+	if(ret != 1){
+		perror("write 1 byte failed!");
+	}
+	::close(fd);
+#endif
 
 #endif
 
@@ -359,9 +386,16 @@ void exfatDlg::sltDelete(bool sel)
 		struct exfat_node * pnode;
 		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
 			if(exfat_unlink(pItemData->m_pexfatRoot,pnode)==0){
+				char tmperr[200];
+				int rc = 0;
 				exfat_put_node(pItemData->m_pexfatRoot,pnode);
-				exfat_cleanup_node(pItemData->m_pexfatRoot,pnode);
-				QMessageBox::information(this, selabsname, tr("Delete Ok!"),QMessageBox::Ok,QMessageBox::Ok);
+				
+				rc = exfat_cleanup_node(pItemData->m_pexfatRoot,pnode);
+				if(rc != 0){
+					sprintf_s(tmperr,"exfat_cleanup_node failed %d\n",rc);
+					QMessageBox::information(this, tr("Delete Failed!"),tmperr, QMessageBox::Ok,QMessageBox::Ok);
+				}
+				QMessageBox::information(this, tr("Delete Ok!"),selabsname, QMessageBox::Ok,QMessageBox::Ok);
 			}
 		}
 		

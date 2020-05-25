@@ -48,6 +48,7 @@ void myexit()
 
 static int clientNum = 0;
 static HANDLE ghMutex = INVALID_HANDLE_VALUE;
+static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
 
 DWORD WorkerThread(LPVOID p)
 {
@@ -74,8 +75,8 @@ DWORD WorkerThread(LPVOID p)
 			int recvlen = recv(sockConn, &recvCmd, 1, 0);
 			//打印接收到的数据
 			if(recvlen>0){
-				sprintf_s(tmpstr,MAX_LOADSTRING,"receive cmd %x from client side [%s,%d]\n",recvCmd, inet_ntoa(clientParam->addrClient.sin_addr), clientParam->addrClient.sin_port);
-				OutputDebugString(tmpstr);
+				//sprintf_s(tmpstr,MAX_LOADSTRING,"receive cmd %x from client side [%s,%d]\n",recvCmd, inet_ntoa(clientParam->addrClient.sin_addr), clientParam->addrClient.sin_port);
+				//OutputDebugString(tmpstr);
 				
 				switch(recvCmd){
 				case TECMD_EFFileOpen:	//
@@ -604,7 +605,7 @@ DWORD WorkerThread(LPVOID p)
 	WaitForSingleObject(ghMutex,INFINITE);
 	clientNum--;
 	ReleaseMutex(ghMutex);
-	Sleep(3000);
+	//Sleep(3000);
 	sprintf_s(tmpstr,MAX_LOADSTRING,"Now Client Num  %d\n",clientNum);
 	OutputDebugString(tmpstr);
 	WaitForSingleObject(ghMutex,INFINITE);
@@ -628,6 +629,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	ghMutex = CreateMutex(NULL,FALSE,NULL);
+	ghWRMutex = CreateMutex(NULL,FALSE,NULL);
 #if 0
  	// TODO: Place code here.
 	MSG msg={0};
@@ -746,7 +748,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	ef = mountFS(tmpstr);
 
 	if(ef==NULL){
-		MessageBox(NULL,"Mount IMG  Err","Mount Err",MB_OK);
+		MessageBox(NULL,tmpstr,"Mount IMG  Err",MB_OK);
 		return -1;
 	}
 	MessageBox(NULL,tmpstr,"Mount Ok",MB_OK);
@@ -767,6 +769,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			break;
 		}
 		
+	}
+	if(ghMutex != NULL){
+		CloseHandle(ghMutex);
+		ghMutex=NULL;
+	}
+	if(ghWRMutex != NULL){
+		CloseHandle(ghWRMutex);
+		ghWRMutex = NULL;
 	}
  
 	return 0;

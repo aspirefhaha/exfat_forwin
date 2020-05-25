@@ -21,8 +21,8 @@ EXFAT_EXPORT struct exfat * get_ef(void){
 
 EXFAT_EXPORT struct exfat * mountFS(const char * fspath){
 	
-	exfat_mount(&st_ef,fspath,"rw");
-	if(ef==NULL)
+	int rc = exfat_mount(&st_ef,fspath,"rw");
+	if(ef==NULL && rc == 0)
 		ef = &st_ef;
 	return ef;
 };

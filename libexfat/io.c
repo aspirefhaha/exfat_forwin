@@ -192,15 +192,15 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	if(writtensize != size){
 		return 0;
 	}
-	readbuf = (unsigned char*)malloc(size);
-	ret = lseek((int)fd,off,SEEK_SET);
-	readsize = read((int)fd,readbuf,size);
-	if(memcmp(buf,readbuf,size)!=0){
-		ret = -1;
-	}
-	else
-		ret = size;
-	free(readbuf);
+	//readbuf = (unsigned char*)malloc(size);
+	//ret = lseek((int)fd,off,SEEK_SET);
+	//readsize = read((int)fd,readbuf,size);
+	//if(memcmp(buf,readbuf,size)!=0){
+	//	ret = -1;
+	//}
+	//else
+	//	ret = size;
+	//free(readbuf);
 	return ret;
 #else
 	BYTE tmpbuf[XDISKSECSIZE];

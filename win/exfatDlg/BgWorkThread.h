@@ -49,7 +49,7 @@ signals:
 	void updateSize(qlonglong);
 	void updateProg(qlonglong);
 	void warningMsg(QString & ,QString&);
-	void copyDone();
+	void copyDone(int);
 protected:
 	bool m_bIsQuit;
 	QList<QString> m_selPaths;

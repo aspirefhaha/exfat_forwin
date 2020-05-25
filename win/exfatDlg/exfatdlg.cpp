@@ -65,7 +65,7 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	dia.setLabelText("Updating...");//提示标签
 	connect(&bgcopyTh,SIGNAL(updateSize(qlonglong )),this,SLOT(updateCpSize(qlonglong)));
 	connect(&bgcopyTh,SIGNAL(updateProg(qlonglong)),this,SLOT(updateCpProg(qlonglong)));
-	connect(&bgcopyTh,SIGNAL(copyDone()),this,SLOT(copyDone()));
+	connect(&bgcopyTh,SIGNAL(copyDone(int)),this,SLOT(copyDone(int)));
 	connect(&bgcopyTh,SIGNAL(warningMsg(QString & ,QString&)),this,SLOT(showWarningMsg(QString & ,QString&)));
 }
 
@@ -75,13 +75,16 @@ void exfatDlg::showWarningMsg(QString & title,QString & msg)
 	QMessageBox::warning(this, title, msg,QMessageBox::Ok,QMessageBox::Ok);
 }
 
-void exfatDlg::copyDone()
+void exfatDlg::copyDone(int res)
 {
 	dia.close();
 	QModelIndex curidx = ui.tv_main->currentIndex();
 	QModelIndex curheadidx = curidx.sibling(curidx.row(),0);
 	ui.tv_main->collapse(curheadidx);
 	ui.tv_main->expand(curheadidx);
+	if(res<0){
+		QMessageBox::warning(this, tr("Copy Res"), tr("Failed!!!!"),QMessageBox::Ok,QMessageBox::Ok);
+	}
 }
 
 void exfatDlg::updateCpSize(qlonglong tsize)
@@ -183,7 +186,7 @@ void exfatDlg::dropEvent(QDropEvent * event)
 			
 			
 			dia.setMinimum(0);//设置最小值
-			dia.setMaximum(100);//设置最大值
+			dia.setMaximum(1000);//设置最大值
 			dia.setValue(0);//设置进度条数值
 
 			//如何实时更新进度条？
@@ -192,7 +195,11 @@ void exfatDlg::dropEvent(QDropEvent * event)
 			
 			bgcopyTh.setWorkMode(WMCPTOEXF);
 			QList<QString> selfiles ;
-			selfiles << fileName;
+			//selfiles << fileName;
+			for(int k = 0;k<urlList.size();k++){
+				QString tfileName=urlList.at(k).toLocalFile();
+				selfiles<<tfileName;
+			}
 			bgcopyTh.setSelPath(selfiles);
 			if(pItemData->fstype==EXFTDRIVE){
 				QString tmpStr = "/";

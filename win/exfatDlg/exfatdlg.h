@@ -40,7 +40,7 @@ protected slots:
 	void dragEnterEvent(QDragEnterEvent *);
 	void dragMoveEvent(QDragMoveEvent *);
 	void dropEvent(QDropEvent * event);
-	void copyDone();
+	void copyDone(int);
 	void updateCpSize(qlonglong);
 	void showWarningMsg(QString & ,QString&);
 	void updateCpProg(qlonglong);

@@ -407,14 +407,17 @@ QVariant ExfatModel::data(const QModelIndex & index,
 					qlonglong tmpsize = (qlonglong)(selPtr->m_pexfatRoot->sb->cluster_count.__u32);
 					filesize = covertHumanString( tmpsize << (selPtr->m_pexfatRoot->sb->spc_bits + selPtr->m_pexfatRoot->sb->sector_bits));
 				}
+				QString leftsize = covertHumanString(((qlonglong)exfat_count_free_clusters(selPtr->m_pexfatRoot)) << (selPtr->m_pexfatRoot->sb->spc_bits+selPtr->m_pexfatRoot->sb->sector_bits));
+				//total = le32_to_cpu(selPtr->m_pexfatRoot->sb->cluster_count);
+				//selPtr->m_pexfatRoot->sb->allocated_percent = ((total - free) * 100 + total / 2) / total;
 				QString filetype = tr("Drive");
 				QString filelastmodifytime = "";
 				switch(index.column()){
 				case 0:
-					return QVariant(filename);
+					return QVariant(filename+"(" + filesize+")");
 					break;
 				case 1:
-					return QVariant(filesize);
+					return QVariant(leftsize);
 					break;
 				case 2:
 					return QVariant(filetype);

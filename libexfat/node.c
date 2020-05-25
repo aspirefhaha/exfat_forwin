@@ -38,8 +38,10 @@
 struct exfat_node* exfat_get_node(struct exfat_node* node)
 {
 #ifdef WIN32
+#if 0
 	char tmpname[EXFAT_NAME_MAX]={0};
 	char tmpbuf[1024]={0};
+#endif
 #endif
 	/* if we switch to multi-threaded mode we will need atomic
 	   increment here and atomic decrement in exfat_put_node() */
@@ -56,8 +58,10 @@ void exfat_put_node(struct exfat* ef, struct exfat_node* node)
 {
 	char buffer[EXFAT_UTF8_NAME_BUFFER_MAX];
 #ifdef WIN32
+#if 0
 	char tmpname[EXFAT_NAME_MAX]={0};
 	char tmpbuf[1024]={0};
+#endif
 #endif
 	--node->references;
 #if 0
@@ -376,7 +380,7 @@ static int parse_file_entry(struct exfat* ef, struct exfat_node* parent,
 
 	rc = read_entries(ef, parent, entries, n, *offset);
 	if (rc != 0) {
-#ifndef WIN32
+#ifdef WIN32
 		if (entries) {
 			free(entries);
 		}

@@ -24,12 +24,20 @@ void BgWorkThread::run()
 	case WMCPTOEXF:
 		{
 			quint64 totalsize = 0;
-
+			char tmpstr[100]={0};
 			QList<QString>::Iterator iter = m_selPaths.begin();
 			for(;iter!=m_selPaths.end() && !m_bIsQuit;iter++){
 				totalsize += getOutSubItemSize((*iter));
 			}
-			
+			qlonglong leftsize = ((qlonglong)exfat_count_free_clusters(ef)) << (ef->sb->spc_bits+ef->sb->sector_bits);
+			sprintf_s(tmpstr,"leftsize %lld\n",leftsize);
+			OutputDebugStringA(tmpstr);
+			if (totalsize >= (leftsize - 1024 * 1024*1024LL) * 0.95)
+			{
+				emit updateSize(1000);
+				emit copyDone(-1);
+				break;
+			}
 			//emit calcItemCount(0,totalcount);
 			emit updateSize(totalsize);
 			
@@ -37,7 +45,7 @@ void BgWorkThread::run()
 			CopyFilesToExfat(m_selPaths,m_selTargetDir);
 			
 			
-			emit copyDone();
+			emit copyDone(0);
 			//m_currentTotalCount = totalcount;
 			//CopyFilesToExfat(m_selPaths,m_innertarget);
 		}
@@ -92,14 +100,14 @@ quint64 BgWorkThread::CopyDirToExfat(QString &sourcedir,QString & targetdir,quin
 		QString curdirname = fullDir.absoluteFilePath();
 		QFileInfo subfileinfo(curdirname);
 		if(subfileinfo.isDir()){
-			localcursize +=  CopyDirToExfat(curdirname,subtargetdir,localcursize);
+			localcursize =  CopyDirToExfat(curdirname,subtargetdir,localcursize);
 		}
 		else{
 			localcursize +=  CopyFileToExfat(curdirname,subtargetdir,localcursize);
-			emit updateSize(localcursize);
+			emit updateProg(localcursize);
 		}
     }
-	emit updateSize(localcursize);
+	emit updateProg(localcursize);
 	return localcursize;
 }
 
@@ -208,7 +216,7 @@ int BgWorkThread::CopyFilesToOuter(QList<QPair<QString,QString>> & copyitems)
 		}
 #endif
 	}
-	emit copyDone();
+	emit copyDone(0);
 	return 0;
 }
 
@@ -227,7 +235,7 @@ int BgWorkThread::CopyFilesToExfat(QList<QString> selOutPaths,QString intargetdi
 			emit updateProg(cursize);
 		}
 	}
-	emit copyDone();
+	emit copyDone(0);
 	return 0;
 }
 

@@ -139,14 +139,14 @@ enum exfat_mode
 
 struct exfat_dev
 {
-#if USEXDISK==1
+#if USEXDISK
 	HANDLE fd;
 #else
 	int fd;
 #endif
 	enum exfat_mode mode;
 	off_t size; /* in bytes */
-#if USEXDISK!=0
+#if USEXDISK
 	off_t curpos; //in xdisk add for support lseek
 #endif
 #ifdef USE_UBLIO

@@ -34,7 +34,8 @@
 #include <unistd.h>
 #else
 #include <Windows.h>
-#include "xDiskInterface.h"
+//#include "xDiskInterface.h"
+#include "xDiskChipsbank.h"
 #include <io.h>
 #include <process.h>
 #endif
@@ -56,15 +57,88 @@
 #endif
 
 #ifdef WIN32
-
 HINSTANCE  glibXDisk = NULL;
+#define USE512KCACHE 1
+#if USENEWAPI
 API_OpenXDisk  pOpenXDisk = NULL;
 API_CloseXDisk pCloseXDisk = NULL;
 API_WriteHideSector pWriteHideSector = NULL;
 API_ReadHideSector pReadHideSector = NULL;
 API_GetError pGetError = NULL;
-static void xdisk_init()
+#else
+API_OpenUsbDisk pOpenUsbDisk;
+API_OpenUsbDiskEx pOpenUsbDiskEx;
+API_CloseUsbDisk pCloseUsbDisk;
+API_ChangeAuthorizeKey pChangeAuthorizeKey;
+API_CheckAuthorizeKey pCheckAuthorizeKey;
+API_ReadPrivateUserSector pReadPrivateUserSector;
+API_WritePrivateUserSector pWritePrivateUserSector;
+API_GetHideZoneSize pGetHideZoneSize;
+API_GetHideZoneLun pGetHideZoneLun;
+API_GetHideZoneDriveLetter pGetHideZoneDriveLetter;
+API_VerifyUserPassword pVerifyUserPassword;
+API_ChangeUserPassword pChangeUserPassword;
+API_MountHideZoneAsDisk pMountHideZoneAsDisk;
+API_UnMountHideZoneAsDisk pUnMountHideZoneAsDisk;
+API_IsInHideZone pIsInHideZone;
+API_IsCdrom pIsCdrom;
+API_SetDiskProtect pSetDiskProtect;
+API_SetDiskProtectEx pSetDiskProtectEx;
+API_LockUsbDisk pLockUsbDisk;
+API_UnLockUsbDisk pUnLockUsbDisk;
+API_GetUsbDiskSize pGetUsbDiskSize;
+API_SetUsbDiskSize pSetUsbDiskSize;
+API_DiskFormat pDiskFormat;
+API_UpdateISOFileOfCDROMDriver pUpdateISOFileOfCDROMDriver;
+API_GetUDiskSerialNumber pGetUDiskSerialNumber;
+API_SetUDiskSerialNumber pSetUDiskSerialNumber;
+API_GetPID pGetPID;
+API_SetPID pSetPID;
+API_GetVID pGetVID;
+API_SetVID pSetVID;
+API_GetProductInfo pGetProductInfo;
+API_SetProductInfo pSetProductInfo;
+API_GetVendorInfo pGetVendorInfo;
+API_SetVendorInfo pSetVendorInfo;
+API_IsHighSpeed pIsHighSpeed;
+API_GetVendorSerial pGetVendorSerial;
+API_GetUDiskLetter pGetUDiskLetter;
+API_GetError pGetError;
+API_GetPrivateZoneSize pGetPrivateZoneSize;
+API_GetPrivateZoneLun pGetPrivateZoneLun;
+API_IsReadProtect pIsReadProtect;
+API_IsWriteProtect pIsWriteProtect;
+API_PzCopyFileTo pPzCopyFileTo;
+API_PzCopyFileFrom pPzCopyFileFrom;
+API_PzDeleteFile pPzDeleteFile;
+API_PzFindFirstFile pPzFindFirstFile;
+API_PzFindNextFile pPzFindNextFile;
+API_PzFindClose pPzFindClose;
+API_PzCreateDir pPzCreateDir;
+API_PzOpenFile pPzOpenFile;
+API_PzReadFile pPzReadFile;
+API_PzWriteFile pPzWriteFile;
+API_PzCloseFile pPzCloseFile;
+API_PzSetFilePointer pPzSetFilePointer;
+API_PzGetFileSize pPzGetFileSize;
+API_PzGetRemainSpaceSize pPzGetRemainSpaceSize;
+API_PzDeleteDir pPzDeleteDir;
+API_PzMoveFile pPzMoveFile;
+API_Login pLogin;
+API_Logout pLogout;
+API_GetUID pGetUID;
+API_PzSetCopyFileProgress pPzSetCopyFileProgress;
+API_RefreshDisk pRefreshDisk;
+API_IsReadProtectEx pIsReadProtectEx;
+#endif
+
+#if USEXDISK
+char FIRST512KCACHE[0x80000];
+#endif
+
+void xdisk_init()
 {
+#if USENEWAPI
 	if(glibXDisk==NULL){
 		glibXDisk = LoadLibraryA("xDiskInterface.dll");
 		if(glibXDisk== NULL){
@@ -102,6 +176,84 @@ static void xdisk_init()
 			return;
 		}
 	}
+#else
+	if(glibXDisk==NULL){
+		glibXDisk = LoadLibraryA("api2xxx_dll_M.dll");
+		if(glibXDisk== NULL){
+			MessageBox(NULL,"Load api2xxx_dll_M.dll Failed!!!!!!!!!!!","Dll",MB_OK);
+			return;
+		}
+#define LOAD_API(apiname) do{ p##apiname = (API_##apiname)GetProcAddress(glibXDisk,#apiname);\
+	if(p##apiname == NULL){\
+	OutputDebugString("Get " #apiname "Failed!!!!!!!\n");return;}}while(0)
+
+		LOAD_API(OpenUsbDisk);
+		LOAD_API(OpenUsbDiskEx);
+		LOAD_API(CloseUsbDisk);
+		LOAD_API(ChangeAuthorizeKey);
+		LOAD_API(CheckAuthorizeKey);
+		LOAD_API(ReadPrivateUserSector);
+		LOAD_API(WritePrivateUserSector);
+		LOAD_API(GetHideZoneSize);
+		LOAD_API(GetHideZoneLun);
+		LOAD_API(GetHideZoneDriveLetter);
+		LOAD_API(VerifyUserPassword);
+		LOAD_API(ChangeUserPassword);
+		LOAD_API(MountHideZoneAsDisk);
+		LOAD_API(UnMountHideZoneAsDisk);
+		LOAD_API(IsInHideZone);
+		LOAD_API(IsCdrom);
+		LOAD_API(SetDiskProtect);
+		LOAD_API(SetDiskProtectEx);
+		LOAD_API(LockUsbDisk);
+		LOAD_API(UnLockUsbDisk);
+		LOAD_API(GetUsbDiskSize);
+		LOAD_API(SetUsbDiskSize);
+		LOAD_API(DiskFormat);
+		LOAD_API(UpdateISOFileOfCDROMDriver);
+		LOAD_API(GetUDiskSerialNumber);
+		LOAD_API(SetUDiskSerialNumber);
+		LOAD_API(GetPID);
+		LOAD_API(SetPID);
+		LOAD_API(GetVID);
+		LOAD_API(SetVID);
+		LOAD_API(GetProductInfo);
+		LOAD_API(SetProductInfo);
+		LOAD_API(GetVendorInfo);
+		LOAD_API(SetVendorInfo);
+		LOAD_API(IsHighSpeed);
+		LOAD_API(GetVendorSerial);
+		LOAD_API(GetUDiskLetter);
+		LOAD_API(GetError);
+		LOAD_API(GetPrivateZoneSize);
+		LOAD_API(GetPrivateZoneLun);
+		LOAD_API(IsReadProtect);
+		LOAD_API(IsWriteProtect);
+		LOAD_API(PzCopyFileTo);
+		LOAD_API(PzCopyFileFrom);
+		LOAD_API(PzDeleteFile);
+		LOAD_API(PzFindFirstFile);
+		LOAD_API(PzFindNextFile);
+		LOAD_API(PzFindClose);
+		LOAD_API(PzCreateDir);
+		LOAD_API(PzOpenFile);
+		LOAD_API(PzReadFile);
+		LOAD_API(PzWriteFile);
+		LOAD_API(PzCloseFile);
+		LOAD_API(PzSetFilePointer);
+		LOAD_API(PzGetFileSize);
+		LOAD_API(PzGetRemainSpaceSize);
+		LOAD_API(PzDeleteDir);
+		LOAD_API(PzMoveFile);
+		LOAD_API(Login);
+		LOAD_API(Logout);
+		LOAD_API(GetUID);
+		LOAD_API(PzSetCopyFileProgress);
+		LOAD_API(RefreshDisk);
+		LOAD_API(IsReadProtectEx);
+	}
+	
+#endif
 }
 
 static void xdisk_uninit()
@@ -118,26 +270,45 @@ int fsync(int fd)
 	//sync();
 	return 0;
 }
-#if USEXDISK==1
+#if USEXDISK
 #define XDISKSECSIZE 512
 #define XDISKCURTOTALSIZE (50000LL*1024LL*1024L)
 #endif
+
+
+int needDebug = 1;
+
 int pread(HANDLE fd, char * buf, size_t size, off_t off)
 {
+
 #if USEXDISK==0
 	off_t ret = lseek((int)fd,  off, SEEK_SET);
+#if _DEBUG
+	
+	if(needDebug){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
+		OutputDebugString((LPCSTR)errbuf);
+	}
+#endif
 	if (ret == (off_t)-1) {
 		return 0;
 	}
 	return read((int)fd, buf, size);
 #else
+#if USENEWAPI
 	BYTE tmpbuf[XDISKSECSIZE];
-	char errbuf[XDISKSECSIZE];
 	int readsec = 0;
 	size_t needsize = size;
 	size_t firstsecsize = 0;
-	sprintf((char *)errbuf,"\t\twant read at %llx size %u\n",off,size);
-	OutputDebugString((LPCSTR)errbuf);
+#if _DEBUG
+	
+	if(needDebug){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,"\t\twant read at %llx size %u\n",off,size);
+		OutputDebugString((LPCSTR)errbuf);
+	}
+#endif
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
 		size_t firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
@@ -176,15 +347,92 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 		needsize = 0;
 	}
 	return size;
+#else
+	
+	BYTE tmpbuf[XDISKSECSIZE];
+	int readsec = 0;
+	size_t needsize = size;
+	size_t firstsecsize = 0;
+#if _DEBUG
+	
+	if(needDebug){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
+		OutputDebugString((LPCSTR)errbuf);
+	}
+#endif
+
+#if USE512KCACHE
+	do{
+		if(off <0x80000){
+			if(off + needsize <=0x80000){
+				memcpy(buf,&FIRST512KCACHE[off],needsize);
+				return needsize;
+			}
+			
+		}
+	}while(0);
+#endif
+
+	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
+		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
+		firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
+		if(pReadPrivateUserSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,0)){
+			
+			memcpy(buf,&tmpbuf[off - startoff],firstsecsize);
+		}
+		else{
+			sprintf((char *)tmpbuf,"first read failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError(fd));
+			OutputDebugString((LPCSTR)tmpbuf);
+		}
+		needsize -= firstsecsize;
+		off += firstsecsize;
+	}
+	//off is now XDISKSECSIZE aligned
+	while(needsize>=XDISKSECSIZE){
+		off_t curoff = off / XDISKSECSIZE;
+		if(pReadPrivateUserSector(fd, curoff,tmpbuf,1,0))
+			memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,XDISKSECSIZE);
+		else{
+			sprintf((char *)tmpbuf,"mid read failed at 0x%llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError(fd));
+			OutputDebugString((LPCSTR)tmpbuf);
+		}
+		needsize -= XDISKSECSIZE;
+		readsec++;
+		off += XDISKSECSIZE;
+	}
+	//left some tail bytes
+	if(needsize >0){
+		if(pReadPrivateUserSector(fd, off / XDISKSECSIZE,tmpbuf,1,0))
+			memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,needsize);
+		else{
+			sprintf((char *)tmpbuf,"last read failed at 0x%llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError(fd));
+			OutputDebugString((LPCSTR)tmpbuf);
+		}
+		needsize = 0;
+	}
+	return size;
+#endif
 #endif
 }
 
+
 int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 {
+	char errbuf[256]={0};
+
 #if USEXDISK==0
 	off_t ret = lseek((int)fd,  off,SEEK_SET );
 	size_t writtensize = 0,readsize = 0;
 	unsigned char * readbuf = NULL;
+#ifdef _DEBUG
+	do{
+		if(needDebug){
+			sprintf_s(errbuf,256,"\t\twant write at %llx size %u\n",off,size);
+			OutputDebugString((LPCSTR)errbuf);
+		}
+	}while(0);
+#endif
 	if (ret == (off_t)-1) {
 		return 0;
 	}
@@ -203,16 +451,24 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	//free(readbuf);
 	return ret;
 #else
+#if USENEWAPI
 	BYTE tmpbuf[XDISKSECSIZE];
-	char errbuf[XDISKSECSIZE];
+	
 	int readsec = 0;
 	size_t needsize = size;
 	size_t firstsecsize = 0;
-	sprintf((char *)errbuf,"\t\twant write at %llx size %u\n",off,size);
-	OutputDebugString((LPCSTR)errbuf);
+#ifdef _DEBUG
+	do{
+		if(needDebug){
+			sprintf_s(errbuf,256,"\t\twant write at %llx size %u\n",off,size);
+			OutputDebugString((LPCSTR)errbuf);
+		}
+	}while(0);
+#endif
+	
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
-		size_t firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
+		firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
 		if(pReadHideSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)){
 			memcpy(&tmpbuf[off - startoff],buf,firstsecsize);
 			if(pWriteHideSector(fd,startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL)==FALSE){
@@ -268,6 +524,73 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 		needsize = 0;
 	}
 	return size;
+#else
+	BYTE tmpbuf[XDISKSECSIZE];
+	int readsec = 0;
+	size_t needsize = size;
+	size_t firstsecsize = 0;
+#if USE512KCACHE
+	do{
+		if(off <0x80000){
+			if(off + needsize <=0x80000){
+				memcpy(&FIRST512KCACHE[off],buf,needsize);
+			}
+			else{
+				int cpysize = 0x80000 - off;
+				memcpy(&FIRST512KCACHE[off],buf,cpysize);
+			}
+		}
+	}while(0);
+#endif
+
+	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
+		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
+		firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
+		if(pReadPrivateUserSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,0)){
+			memcpy(&tmpbuf[off - startoff],buf,firstsecsize);
+			if(pWritePrivateUserSector(fd,startoff / XDISKSECSIZE,tmpbuf,1,0,FALSE)==FALSE){
+				sprintf((char *)errbuf,"first write at write failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError(fd));
+				OutputDebugString((LPCSTR)errbuf);
+			}
+		}
+		else{
+			sprintf((char *)tmpbuf,"first read at write failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError(fd));
+			OutputDebugString((LPCSTR)tmpbuf);
+		}
+		needsize -= firstsecsize;
+		off += firstsecsize;
+	}
+	//off is now XDISKSECSIZE aligned
+	while(needsize>=XDISKSECSIZE){
+		off_t curoff = off / XDISKSECSIZE;
+		size_t cursecnum = needsize/XDISKSECSIZE;
+		if(pWritePrivateUserSector(fd,curoff,(BYTE *)buf+firstsecsize,cursecnum,FALSE,NULL)==FALSE){
+			sprintf((char *)errbuf,"mid write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE*cursecnum,pGetError(fd));
+			OutputDebugString((LPCSTR)errbuf);
+		}
+		
+		needsize -= cursecnum* XDISKSECSIZE;
+		readsec  += cursecnum;
+		off += cursecnum*XDISKSECSIZE;
+	}
+	//left some tail bytes
+	if(needsize >0){
+		if(pReadPrivateUserSector(fd, off / XDISKSECSIZE,tmpbuf,1,0)){
+			memcpy(tmpbuf,buf + firstsecsize + readsec * XDISKSECSIZE,needsize);
+			if(pWritePrivateUserSector(fd,off/XDISKSECSIZE,tmpbuf,1,0,FALSE)==FALSE){
+				sprintf((char *)errbuf,"last write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError(fd));
+				OutputDebugString((LPCSTR)errbuf);
+				
+			}
+		}
+		else{
+			sprintf((char *)tmpbuf,"last read at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError(fd));
+			OutputDebugString((LPCSTR)tmpbuf);
+		}
+		needsize = 0;
+	}
+	return size;
+#endif
 #endif
 }
 
@@ -287,13 +610,22 @@ static bool is_open(int fd)
 static HANDLE open_ro(const char* spec)
 {
 #ifdef WIN32
-	OutputDebugString("open ro\n");
 #if USEXDISK
+#if USENEWAPI
 	xdisk_init();
 	if(glibXDisk!=NULL){
 		HANDLE hDisk = pOpenXDisk((char *)spec,'E');
 		return hDisk;
 	}
+#else
+	HANDLE hDisk = pOpenUsbDisk((char*)spec,NULL,NULL,FALSE);
+	if(hDisk == NULL){
+		char errmsg[100];
+		sprintf_s(errmsg,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
+		OutputDebugString(errmsg);
+	}
+	return hDisk;
+#endif
 #else
 	return (HANDLE)open(spec, O_RDONLY | O_BINARY);
 #endif
@@ -305,16 +637,24 @@ static HANDLE open_ro(const char* spec)
 static HANDLE open_rw(const char* spec)
 {
 #ifdef WIN32
-#ifdef _DEBUG
-	//OutputDebugString("open rw\n");
-#endif
+
 #if USEXDISK
+#if USENEWAPI
 	xdisk_init();
 	if(glibXDisk!=NULL){
 		HANDLE hDisk = pOpenXDisk((char *)spec,'E');
 		return hDisk;
 	}
 	return INVALID_HANDLE_VALUE;//
+#else
+	HANDLE hDisk = pOpenUsbDisk((char*)spec,NULL,NULL,FALSE);
+	if(hDisk == NULL){
+		char errmsg[100];
+		sprintf_s(errmsg,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
+		OutputDebugString(errmsg);
+	}
+	return hDisk;
+#endif
 #else
 	int fd = open(spec, O_RDWR | O_BINARY );
 	return (HANDLE)fd;
@@ -486,7 +826,6 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #endif
 	{
 		/* works for Linux, FreeBSD, Solaris */
-		//TODO
 #if defined(WIN32) && !defined(WIN64)
 #if 1
 #if USEXDISK==0
@@ -508,7 +847,15 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		_fstat64(dev->fd, &statbuf);
 		dev->size = statbuf.st_size;
 #else
+#if USENEWAPI
+		//TODO
 		dev->size = XDISKCURTOTALSIZE;
+#else
+		//BYTE lun = 0;
+		//lun = pGetPrivateZoneLun(dev->fd,NULL);
+		dev->size = pGetPrivateZoneSize(dev->fd);
+		
+#endif
 #endif
 #else
 		FILE * fp = NULL;
@@ -577,7 +924,9 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		return NULL;
 	}
 #endif
-
+#if USE512KCACHE
+	pReadPrivateUserSector(dev->fd,0,(BYTE *)&FIRST512KCACHE,0x80000/512,NULL);
+#endif
 	return dev;
 }
 
@@ -600,11 +949,15 @@ int exfat_close(struct exfat_dev* dev)
 		rc = -EIO;
 	}
 #else
+#if USENEWAPI
 	xdisk_init();
 	if(glibXDisk != NULL){
 		pCloseXDisk(dev->fd);
 		xdisk_uninit();
 	}
+#else
+	pCloseUsbDisk(dev->fd);
+#endif
 #endif
 	free(dev);
 	return rc;
@@ -654,8 +1007,14 @@ off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence)
 	case SEEK_SET:
 		dev->curpos = offset;
 		break;
-	case SEEK_END:
-		dev->curpos = XDISKCURTOTALSIZE + offset;
+	case SEEK_END:{
+#if USENENWAPI
+			dev->curpos = XDISKCURTOTALSIZE + offset;
+#else
+			
+			dev->curpos = pGetPrivateZoneSize(dev->fd) + offset;
+#endif
+		}
 		break;
 	case SEEK_CUR:
 		dev->curpos += offset;

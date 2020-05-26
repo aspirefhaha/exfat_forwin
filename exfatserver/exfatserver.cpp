@@ -12,7 +12,7 @@
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"libexfat.lib")
 
-#define MAX_LOADSTRING 100
+#define MAX_LOADSTRING 256
 
 // Global Variables:
 HINSTANCE hInst;								// current instance
@@ -50,6 +50,8 @@ static int clientNum = 0;
 static HANDLE ghMutex = INVALID_HANDLE_VALUE;
 static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
 
+int wantDebugServer = 1;
+
 DWORD WorkerThread(LPVOID p)
 {
 	char tmpstr[MAX_LOADSTRING];
@@ -66,7 +68,7 @@ DWORD WorkerThread(LPVOID p)
 	}
 	else
 	{
-		sprintf_s(tmpstr,MAX_LOADSTRING,"The Server receive a new client connection [%s,%d !\n", inet_ntoa(clientParam->addrClient.sin_addr), clientParam->addrClient.sin_port);OutputDebugString(tmpstr);
+		sprintf_s(tmpstr,MAX_LOADSTRING,"The Server Thread %d Sock %x receive a new client connection [%s,%d ]!\n",GetCurrentThreadId(), sockConn,inet_ntoa(clientParam->addrClient.sin_addr), clientParam->addrClient.sin_port);OutputDebugString(tmpstr);
 		do{
 			//发送数据
 			//send(sockConn, sendBuf, strlen(sendBuf)+1 , 0);
@@ -98,6 +100,7 @@ DWORD WorkerThread(LPVOID p)
 							assert(0);
 							break;
 						}
+						
 						memcpy(localfilename,cmdParams+4,EXFAT_UTF8_NAME_BUFFER_MAX);
 						//dwCreationDisposition = *(DWORD *)cmdParams;
 						memcpy(&dwCreationDisposition,cmdParams,sizeof(dwCreationDisposition));
@@ -116,7 +119,13 @@ DWORD WorkerThread(LPVOID p)
 							}
 							localfilename[0] = '/';
 						}
-						
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							sprintf_s(tmpstr,256,"want openfile %s\n",localfilename);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						switch(dwCreationDisposition){
 						case OPEN_EXISTING:
 							findres = exfat_lookup(ef,&node,localfilename);
@@ -210,6 +219,15 @@ DWORD WorkerThread(LPVOID p)
 						}
 
 						memcpy(&pnode,cmdParams,sizeof(struct exfat_node*));
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want close file %s\n",localfilename);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						WaitForSingleObject(ghMutex,INFINITE);
 	
 						exfat_flush_node(ef,pnode);
@@ -258,6 +276,13 @@ DWORD WorkerThread(LPVOID p)
 							localfilename[0] = '/';
         
 						}
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							sprintf_s(tmpstr,256,"want path query info of  %s\n",localfilename);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						struct exfat_node * pnode ;
 						EFFSOBJINFO ObjInfo =  {0};
 						rc = exfat_lookup(ef,&pnode,localfilename);
@@ -300,6 +325,15 @@ DWORD WorkerThread(LPVOID p)
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
 						memcpy(&offSeek,&cmdParams[8],sizeof(offSeek));
 						memcpy(&uMethod,&cmdParams[12],sizeof(uMethod));
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want seek file %s to %llx\n",localfilename,offSeek);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						long long offActual = -1;
 						WaitForSingleObject(ghMutex,INFINITE);
 						switch(uMethod){
@@ -337,6 +371,7 @@ DWORD WorkerThread(LPVOID p)
 						int curLen = 1;
 						char rc = -1;
 						long long cbToRead = 0;
+						long long realToRead = cbToRead;
 						struct exfat_node* pnode = NULL;
 						while(tmpRecvLen < (TEC_EFFILEREAD-1) && curLen >0){
 							curLen =  recv(sockConn,cmdParams+tmpRecvLen,TEC_EFFILEREAD-1-tmpRecvLen,0);
@@ -348,12 +383,26 @@ DWORD WorkerThread(LPVOID p)
 						}
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
 						memcpy(&cbToRead,&cmdParams[8],sizeof(cbToRead));
-						if(((uint64_t)pnode->curpos) >= pnode->size || pnode->curpos + cbToRead > pnode->size){
-							assert(-1);
+						realToRead = cbToRead;
+						if(((uint64_t)pnode->curpos) > pnode->size ){
+							assert(0);
+							break;
 						}
-						unsigned char * pvBuf = (unsigned char *)malloc(cbToRead + TEA_EFFILEREAD);
+						if(pnode->size - pnode->curpos < cbToRead){
+							realToRead = pnode->size - pnode->curpos;
+						}
+						unsigned char * pvBuf = (unsigned char *)malloc(realToRead + TEA_EFFILEREAD);
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want read file %s off  %llx size %d\n",localfilename,pnode->curpos,realToRead);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						WaitForSingleObject(ghMutex,INFINITE);
-						long long  retsize =  exfat_generic_pread(ef,pnode,pvBuf+TEA_EFFILEREAD,cbToRead,pnode->curpos);
+						long long  retsize =  exfat_generic_pread(ef,pnode,pvBuf+TEA_EFFILEREAD,realToRead,pnode->curpos);
 						pnode->curpos += retsize;
 						ReleaseMutex(ghMutex);
 						do{
@@ -390,6 +439,15 @@ DWORD WorkerThread(LPVOID p)
 							curLen =  recv(sockConn,pvBuf+tmpRecvLen,cbToWrite-tmpRecvLen,0);
 							tmpRecvLen += curLen;
 						}
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want write file %s off  %llx size %d\n",localfilename,pnode->curpos,cbToWrite);
+							OutputDebugString(tmpstr);
+						}
+#endif
 						WaitForSingleObject(ghMutex,INFINITE);
 						long long  retsize = exfat_generic_pwrite(ef,pnode,pvBuf,cbToWrite,pnode->curpos);
 						pnode->curpos += retsize;
@@ -419,7 +477,15 @@ DWORD WorkerThread(LPVOID p)
 							break;
 						}
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
-						
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want flush file %s \n",localfilename);
+							OutputDebugString(tmpstr);
+						}
+#endif						
 						rc = exfat_flush_node(ef,pnode);
 						
 						do{
@@ -449,6 +515,15 @@ DWORD WorkerThread(LPVOID p)
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
 						
 						//int rc = exfat_flush_node(ef,pnode);
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want get file %s size %lld\n",localfilename,pnode->size);
+							OutputDebugString(tmpstr);
+						}
+#endif	
 						
 						do{
 							char backdata[TEA_EFFILEGETSIZE]={0};
@@ -474,7 +549,15 @@ DWORD WorkerThread(LPVOID p)
 							break;
 						}
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
-						
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want check file %s valid\n",localfilename);
+							OutputDebugString(tmpstr);
+						}
+#endif						
 						//int rc = exfat_flush_node(ef,pnode);
 						rc = pnode->is_unlinked;
 						do{
@@ -602,6 +685,7 @@ DWORD WorkerThread(LPVOID p)
 		}while(1);
 		closesocket(sockConn);	//关闭连接套接字
 	}
+	delete clientParam;
 	WaitForSingleObject(ghMutex,INFINITE);
 	clientNum--;
 	ReleaseMutex(ghMutex);
@@ -740,7 +824,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	DWORD loadRet = GetPrivateProfileString(
       "VBox",            // 节名
       "Img",            // 键名，读取该键的值
-      "D:/Code/exfat_forwin/win/exfatDlg/vdi.img",            // 若指定的键不存在，该值作为读取的默认值
+      "1q2W@_ZS",            // 若指定的键不存在，该值作为读取的默认值
       tmpstr,      // 一个指向缓冲区的指针，接收读取的字符串
       MAX_LOADSTRING,                   // 指定lpReturnedString指向的缓冲区的大小
 	  "./VBox.ini"
@@ -758,12 +842,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		//等待客户请求到来
 		SOCKET SocketAccept = accept(sockServer, (SOCKADDR*)&addrClient, &len);
 		if(SocketAccept>0){
-			struct threadParam clientParam;
-			memcpy(&(clientParam.addrClient),&addrClient,sizeof(addrClient));
-			clientParam.clientSock = SocketAccept;
+			struct threadParam * clientParam = new threadParam;
+			memcpy(&(clientParam->addrClient),&addrClient,sizeof(addrClient));
+			clientParam->clientSock = SocketAccept;
 			DWORD dThreadID = 0;
-			CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)WorkerThread,&clientParam ,0,&dThreadID);
-			sprintf_s(tmpstr,MAX_LOADSTRING,"accept() get client create thread id %d!\n",dThreadID);OutputDebugString(tmpstr);
+			CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)WorkerThread,clientParam ,0,&dThreadID);
+			sprintf_s(tmpstr,MAX_LOADSTRING,"accept() get client create thread id %d Sock %x!\n",dThreadID,SocketAccept);
+			OutputDebugString(tmpstr);
 		}
 		else{
 			break;

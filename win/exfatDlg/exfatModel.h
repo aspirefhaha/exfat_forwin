@@ -13,7 +13,7 @@ extern "C"{
 #if USEXDISK==0
 #define XDISKDEFAULTKEY	"fhaha.img"
 #else
-#define XDISKDEFAULTKEY	"123456"
+#define XDISKDEFAULTKEY	"1q2W@_ZS"
 #endif
 enum EXFATITEMTYPE {
 	EXFTDRIVE=1,

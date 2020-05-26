@@ -27,6 +27,9 @@ EXFAT_EXPORT struct exfat * mountFS(const char * fspath){
 	return ef;
 };
 
+extern "C" void xdisk_init();
+
+
 void CheckModuleName()
 {
 	
@@ -46,12 +49,15 @@ void CheckModuleName()
 	OutputDebugString(tmpstr);
 	sprintf(tmpstr,"ªÒ»°Exe: %s %s\n",fname,ext);
 	OutputDebugString(tmpstr);
+	/*
 	if(strcmp(fname,"VBoxSVC")==0){
 		mountFS("D:/Code/exfat_forwin/win/exfatDlg/conf.img");
 	}
 	else if(strcmp(fname,"VirtualBox")==0){
 		mountFS("D:/Code/exfat_forwin/win/exfatDlg/vdi.img");
 	}
+	*/
+	xdisk_init();
 	return ;
 }
 
@@ -75,8 +81,8 @@ BOOL APIENTRY DllMain(HANDLE hModule,DWORD ul_reason_for_call,LPVOID lpReserved)
 			OutputDebugString("DLL_PROCESS_DETACH\n");
 			//PrintModuleName();
 			if(ef!=NULL){
-				exfat_unmount(ef);
-				ef = NULL;
+				//exfat_unmount(ef);
+				//ef = NULL;
 			}
 		}
 		break;

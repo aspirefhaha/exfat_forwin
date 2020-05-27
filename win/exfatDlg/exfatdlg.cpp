@@ -48,7 +48,16 @@ exfatDlg::exfatDlg(QWidget *parent, Qt::WFlags flags)
 	}
 	exfatModel.addRootDevice(fileName,EXFTDRIVE);
 #else
-	exfatModel.addRootDevice(XDISKDEFAULTKEY,EXFTDRIVE);
+	char tmpstr[128]={0};
+	DWORD loadRet = GetPrivateProfileStringA(
+      "VBox",            // 节名
+      "Img",            // 键名，读取该键的值
+      "1q2W@_ZS",            // 若指定的键不存在，该值作为读取的默认值
+      tmpstr,      // 一个指向缓冲区的指针，接收读取的字符串
+      128,                   // 指定lpReturnedString指向的缓冲区的大小
+	  "./VBox.ini"
+	);
+	exfatModel.addRootDevice(tmpstr,EXFTDRIVE);
 #endif
 	
 	//ui.tv_main->setModel(&InModel);
@@ -336,7 +345,16 @@ void exfatDlg::sltFormat()
 
 	exfatModel.setFsFilename(filename);
 #else
-	QString tmpQStr = XDISKDEFAULTKEY;
+	char tmpstr[128]={0};
+	DWORD loadRet = GetPrivateProfileStringA(
+      "VBox",            // 节名
+      "Img",            // 键名，读取该键的值
+      "1q2W@_ZS",            // 若指定的键不存在，该值作为读取的默认值
+      tmpstr,      // 一个指向缓冲区的指针，接收读取的字符串
+      128,                   // 指定lpReturnedString指向的缓冲区的大小
+	  "./VBox.ini"
+	);
+	QString tmpQStr = tmpstr;
 	exfatModel.setFsFilename(tmpQStr);
 #endif
 	exfatModel.resetfs();

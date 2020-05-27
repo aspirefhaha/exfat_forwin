@@ -276,7 +276,7 @@ int fsync(int fd)
 #endif
 
 
-int needDebug = 1;
+int needDebug = 0;
 
 int pread(HANDLE fd, char * buf, size_t size, off_t off)
 {
@@ -391,15 +391,17 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 	//off is now XDISKSECSIZE aligned
 	while(needsize>=XDISKSECSIZE){
 		off_t curoff = off / XDISKSECSIZE;
-		if(pReadPrivateUserSector(fd, curoff,tmpbuf,1,0))
-			memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,XDISKSECSIZE);
+		size_t cursecnum = needsize/XDISKSECSIZE;
+		if(pReadPrivateUserSector(fd, curoff,(BYTE *)(buf + firstsecsize),cursecnum,0)){
+			//memcpy(buf + firstsecsize + readsec * XDISKSECSIZE,tmpbuf,XDISKSECSIZE);
+		}
 		else{
 			sprintf((char *)tmpbuf,"mid read failed at 0x%llx  size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError(fd));
 			OutputDebugString((LPCSTR)tmpbuf);
 		}
-		needsize -= XDISKSECSIZE;
-		readsec++;
-		off += XDISKSECSIZE;
+		needsize -= cursecnum * XDISKSECSIZE;
+		readsec+=cursecnum;
+		off += cursecnum *XDISKSECSIZE;
 	}
 	//left some tail bytes
 	if(needsize >0){
@@ -925,6 +927,8 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 	}
 #endif
 #if USE512KCACHE
+	//TODO
+	//Handle multi disk err
 	pReadPrivateUserSector(dev->fd,0,(BYTE *)&FIRST512KCACHE,0x80000/512,NULL);
 #endif
 	return dev;

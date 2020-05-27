@@ -34,6 +34,9 @@ struct threadParam {
 	
 };
  
+static int clientNum = 0;
+static HANDLE ghMutex = INVALID_HANDLE_VALUE;
+static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
 
 void myexit()
 {
@@ -44,13 +47,18 @@ void myexit()
 		//exfat_unmount(ef);
 		//ef=NULL;
 	}
+	if(ghMutex != NULL){
+		CloseHandle(ghMutex);
+		ghMutex=NULL;
+	}
+	if(ghWRMutex != NULL){
+		CloseHandle(ghWRMutex);
+		ghWRMutex = NULL;
+	}
 }
 
-static int clientNum = 0;
-static HANDLE ghMutex = INVALID_HANDLE_VALUE;
-static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
 
-int wantDebugServer = 1;
+int wantDebugServer = 0;
 
 DWORD WorkerThread(LPVOID p)
 {
@@ -228,12 +236,12 @@ DWORD WorkerThread(LPVOID p)
 							OutputDebugString(tmpstr);
 						}
 #endif
-						WaitForSingleObject(ghMutex,INFINITE);
+						WaitForSingleObject(ghWRMutex,INFINITE);
 	
 						exfat_flush_node(ef,pnode);
 						exfat_put_node(ef,pnode);
 						
-						ReleaseMutex(ghMutex);
+						ReleaseMutex(ghWRMutex);
 						pnode->curpos = 0;
 						do{
 							char backdata[TEA_EFFILECLOSE]={0};
@@ -401,10 +409,10 @@ DWORD WorkerThread(LPVOID p)
 							OutputDebugString(tmpstr);
 						}
 #endif
-						WaitForSingleObject(ghMutex,INFINITE);
+						//WaitForSingleObject(ghWRMutex,INFINITE);
 						long long  retsize =  exfat_generic_pread(ef,pnode,pvBuf+TEA_EFFILEREAD,realToRead,pnode->curpos);
 						pnode->curpos += retsize;
-						ReleaseMutex(ghMutex);
+						//ReleaseMutex(ghWRMutex);
 						do{
 							pvBuf[0]= TECMD_EFFileRead;
 							memcpy(&pvBuf[1] ,&retsize,sizeof(retsize));
@@ -855,14 +863,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		}
 		
 	}
-	if(ghMutex != NULL){
-		CloseHandle(ghMutex);
-		ghMutex=NULL;
-	}
-	if(ghWRMutex != NULL){
-		CloseHandle(ghWRMutex);
-		ghWRMutex = NULL;
-	}
+	
  
 	return 0;
 }

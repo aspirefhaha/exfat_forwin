@@ -305,7 +305,7 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 	
 	if(needDebug){
 		char errbuf[256]={0};
-		sprintf_s(errbuf,"\t\twant read at %llx size %u\n",off,size);
+		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
 		OutputDebugString((LPCSTR)errbuf);
 	}
 #endif
@@ -623,7 +623,7 @@ static HANDLE open_ro(const char* spec)
 	HANDLE hDisk = pOpenUsbDisk((char*)spec,NULL,NULL,FALSE);
 	if(hDisk == NULL){
 		char errmsg[100];
-		sprintf_s(errmsg,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
+		sprintf_s(errmsg,100,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
 		OutputDebugString(errmsg);
 	}
 	return hDisk;
@@ -652,7 +652,7 @@ static HANDLE open_rw(const char* spec)
 	HANDLE hDisk = pOpenUsbDisk((char*)spec,NULL,NULL,FALSE);
 	if(hDisk == NULL){
 		char errmsg[100];
-		sprintf_s(errmsg,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
+		sprintf_s(errmsg,100,"OpenUsbDisk Failed errcode %x\n",pGetError(NULL));
 		OutputDebugString(errmsg);
 	}
 	return hDisk;

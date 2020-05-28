@@ -417,7 +417,7 @@ void exfatDlg::sltDelete(bool sel)
 				
 				rc = exfat_cleanup_node(pItemData->m_pexfatRoot,pnode);
 				if(rc != 0){
-					sprintf_s(tmperr,"exfat_cleanup_node failed %d\n",rc);
+					sprintf_s(tmperr,200,"exfat_cleanup_node failed %d\n",rc);
 					QMessageBox::information(this, tr("Delete Failed!"),tmperr, QMessageBox::Ok,QMessageBox::Ok);
 				}
 				QMessageBox::information(this, tr("Delete Ok!"),selabsname, QMessageBox::Ok,QMessageBox::Ok);

@@ -30,7 +30,7 @@ void BgWorkThread::run()
 				totalsize += getOutSubItemSize((*iter));
 			}
 			qlonglong leftsize = ((qlonglong)exfat_count_free_clusters(ef)) << (ef->sb->spc_bits+ef->sb->sector_bits);
-			sprintf_s(tmpstr,"leftsize %lld\n",leftsize);
+			sprintf_s(tmpstr,100,"leftsize %lld\n",leftsize);
 			OutputDebugStringA(tmpstr);
 			if (totalsize >= (leftsize - 1024 * 1024*1024LL) * 0.95)
 			{

@@ -18,7 +18,13 @@ VERSION    DATE           CHANGE
 1.0.0.1    20160915       V1.0.0.1首个版本发行；
 1.0.0.2	   20160925		  授权码验证方式修改；
 1.0.0.3    20160928       设备ID获取方式修改；
+2.0.0.1    20200605       虚拟化专用设备接口实现；
 --*/
+//////////////////////////////////////////////////////////////////////////////////////////////
+//加密算法定义
+#define XDISK_ENCRYPT_TYPE_NONE		0x00
+#define XDISK_ENCRYPT_TYPE_AES		0x01
+#define XDISK_ENCRYPT_TYPE_SM4		0x02
 //////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef XDISK_API
 
@@ -69,10 +75,32 @@ typedef HANDLE (* API_OpenXDisk)(char* AuthorizeKey, char DriverLetter);
 //CloseXDisk(HANDLE handle);
 
 typedef BOOL (* API_CloseXDisk)(HANDLE handle);
+/*********************************************************************************************
+函数声明：	BOOL GetPartions(HANDLE hDevice, DWORD* pTotalSector, DWORD* pSector0, DWORD* pSector1, DWORD* pSector2)
+功能描述：	该函数获取安全设备总容量及各分区容量。
+输入参数：	handle-设备句柄。
+输出参数：	pTotalSector-用于返回设备总容量（512字节扇区数量）的指针；
+		    pSector0-用于返回分区0（隐藏区）容量（512字节扇区数量）的指针；
+			pSector1-用于返回分区1（秘密区）容量（512字节扇区数量）的指针；
+			pSector2-用于返回分区2（普通区）容量（512字节扇区数量）的指针；
+返 回 值：	BOOL。
+*********************************************************************************************/
+//XDISK_API
+//BOOL 
+//GetPartions(HANDLE hDevice, 
+//			DWORD* pTotalSector, 
+//			DWORD* pSector0, 
+//			DWORD* pSector1, 
+//			DWORD* pSector2); 
 
+typedef BOOL (*API_GetPartions)(HANDLE hDevice,
+							DWORD* pTotalSector, 
+							DWORD* pSector0, 
+							DWORD* pSector1, 
+							DWORD* pSector2);
 /*********************************************************************************************
 函数声明：	BOOL ReadHideSector(HANDLE handle, DWORD Sectoroffset, BYTE *pData, 
-								DWORD SectorNumber, BOOL bDecrypt = FALSE, BYTE *pKey)
+								DWORD SectorNumber, BOOL bDecrypt = FALSE, BYTE *pKey, BYTE DecryptType)
 功能描述：	该函数从隐藏区指定偏移处读取用户指定个数扇区的数据到缓冲区中。由于可以
 			在隐藏区内部任意指定偏移开始读写，意味着可以将隐藏区划分为不同用途的子
 			区块，存放不同用户的数据。
@@ -81,6 +109,7 @@ typedef BOOL (* API_CloseXDisk)(HANDLE handle);
 			SectorNumber-指定需要读取的扇区个数，每扇区为512字节。
 			bDecrypt-是否需要对读取的数据进行解密。
 			pKey-如果bDecrypt为TRUE，这里需要指定解密秘钥，16字节（128位）。
+			DecryptType-如果bDecrypt为TRUE，这里需要指定解密算法类型，详见算法类型宏定义。
 输出参数：	pData-用于存放从隐藏区读取的数据的用户缓冲区；
 返 回 值：	BOOL。
 *********************************************************************************************/
@@ -91,14 +120,16 @@ typedef BOOL (* API_CloseXDisk)(HANDLE handle);
 //               BYTE *pData,           // Receive Data buf
 //               DWORD SectorNumber,    // Sectors(512 bytes per sector) to read
 //               BOOL bDecrypt,
-//               BYTE *pKey);   
+//               BYTE *pKey，
+//				 BYTE DecryptType);   
 
 typedef BOOL (* API_ReadHideSector)(HANDLE handle,  
                DWORD Sectoroffset,    // Offset sectors in private buf, must be 0,1,2,...
                BYTE *pData,           // Receive Data buf
                DWORD SectorNumber,    // Sectors(512 bytes per sector) to read
                BOOL bDecrypt,
-               BYTE *pKey);   
+               BYTE *pKey, 
+			   BYTE DecryptType);   
 
 
 /*********************************************************************************************
@@ -123,7 +154,8 @@ typedef BOOL (* API_ReadHideSector)(HANDLE handle,
 //				BYTE *pData,           // Data buf to write
 //				DWORD SectorNumber,    // Sectors(512 bytes per sector) to write
 //				BOOL bEncrypt, 
-//				BYTE *pKey);    
+//				BYTE *pKey,
+//				BYTE EncryptType);    
 
 typedef
 BOOL 
@@ -132,7 +164,8 @@ BOOL
 				BYTE *pData,           // Data buf to write
 				DWORD SectorNumber,    // Sectors(512 bytes per sector) to write
 				BOOL bEncrypt, 
-				BYTE *pKey);  
+				BYTE *pKey, 
+				BYTE EncryptType);     
 
 /*********************************************************************************************
 函数声明：	DWORD GetError()

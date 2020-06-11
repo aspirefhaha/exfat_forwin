@@ -647,8 +647,25 @@ DWORD WorkerThread(LPVOID p)
 						struct exfat_node * pnode ;
 						rc = exfat_lookup(ef,&pnode,localfilename);
 						if(rc == 0){
-							exfat_cleanup_node(ef,pnode);
-							exfat_put_node(ef,pnode);
+							char tmperr[200];
+							//exfat_cleanup_node(ef,pnode);
+							if(exfat_unlink(ef,pnode)==0){
+								
+								int rc = 0;
+								exfat_put_node(ef,pnode);
+				
+								rc = exfat_cleanup_node(ef,pnode);
+								if(rc != 0){
+									sprintf_s(tmperr,200,"exfat_cleanup_node failed %d\n",rc);
+									exfat_warn(tmperr);
+									//QMessageBox::information(this, tr("Delete Failed!"),tmperr, QMessageBox::Ok,QMessageBox::Ok);
+								}
+							}
+							else{
+								exfat_put_node(ef,pnode);
+								sprintf_s(tmperr,200,"exfat_unlink failed %d\n",rc);
+								exfat_warn(tmperr);
+							}
 						}
 						do{
 							char backdata[TEA_EFFILEDELETE]={0};
@@ -843,8 +860,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		MessageBox(NULL,tmpstr,"Mount IMG  Err",MB_OK);
 		return -1;
 	}
-	MessageBox(NULL,tmpstr,"Mount Ok",MB_OK);
-	MessageBox(NULL,"Close This Dialog Now","Start Server Ok",MB_OK);
+	//MessageBox(NULL,tmpstr,"Mount Ok",MB_OK);
+	//MessageBox(NULL,"Close This Dialog Now","Start Server Ok",MB_OK);
 	while(1)
 	{
 		//等待客户请求到来

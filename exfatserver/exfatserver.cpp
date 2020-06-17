@@ -136,6 +136,8 @@ DWORD WorkerThread(LPVOID p)
 							OutputDebugString(tmpstr);
 						}
 #endif
+						
+						WaitForSingleObject(ghMutex,INFINITE);
 						switch(dwCreationDisposition){
 						case OPEN_EXISTING:
 							findres = exfat_lookup(ef,&node,localfilename);
@@ -200,6 +202,8 @@ DWORD WorkerThread(LPVOID p)
 							rc = -1;
 							break;
 						}
+						
+						ReleaseMutex(ghMutex);
 						do{
 							char backdata[TEA_EFFILEOPEN]={0};
 							backdata[0]= TECMD_EFFileOpen;
@@ -499,8 +503,10 @@ DWORD WorkerThread(LPVOID p)
 							sprintf_s(tmpstr,256,"want flush file %s \n",localfilename);
 							OutputDebugString(tmpstr);
 						}
-#endif						
+#endif					
+						WaitForSingleObject(ghMutex,INFINITE);
 						rc = exfat_flush_node(ef,pnode);
+						ReleaseMutex(ghMutex);
 						
 						do{
 							char backdata[TEA_EFFILEFLUSH]={0};
@@ -530,7 +536,9 @@ DWORD WorkerThread(LPVOID p)
 						memcpy(&newFileSize,&cmdParams[8],sizeof(unsigned long long));
 						
 						//int rc = exfat_flush_node(ef,pnode);
+						WaitForSingleObject(ghMutex,INFINITE);
 						rc = exfat_truncate(ef,pnode,newFileSize,0);
+						ReleaseMutex(ghMutex);
 #if _DEBUG
 						if(wantDebugServer){
 							char tmpmsg[256]={0};
@@ -693,6 +701,7 @@ DWORD WorkerThread(LPVOID p)
 						if(rc == 0){
 							char tmperr[200];
 							//exfat_cleanup_node(ef,pnode);
+							WaitForSingleObject(ghMutex,INFINITE);
 							if(exfat_unlink(ef,pnode)==0){
 								
 								int rc = 0;
@@ -710,6 +719,8 @@ DWORD WorkerThread(LPVOID p)
 								sprintf_s(tmperr,200,"exfat_unlink failed %d\n",rc);
 								exfat_warn(tmperr);
 							}
+							
+							ReleaseMutex(ghMutex);
 						}
 						do{
 							char backdata[TEA_EFFILEDELETE]={0};
@@ -723,27 +734,25 @@ DWORD WorkerThread(LPVOID p)
 				case TECMD_EFDirList:
 					{
 						//TODO
-						/*char cmdParams[TEC_EFFILEOPEN-1]={0};
+						char cmdParams[TEC_EFFILELIST-1]={0};
 						int tmpRecvLen = 0;
 						int curLen = 1;
 						char rc = -1;
 						
 						struct exfat_node* node = NULL;
-						int findres = -1;
-						DWORD dwCreationDisposition=0;
+						int rescount = 0;
 						char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
-						while(tmpRecvLen < TEC_EFFILEOPEN-1 && curLen >0){
-							curLen =  recv(sockConn,cmdParams+tmpRecvLen,TEC_EFFILEOPEN-1-tmpRecvLen,0);
+						while(tmpRecvLen < TEC_EFFILELIST-1 && curLen >0){
+							curLen =  recv(sockConn,cmdParams+tmpRecvLen,TEC_EFFILELIST-1-tmpRecvLen,0);
 							tmpRecvLen += curLen;
 						}
-						if(tmpRecvLen != TEC_EFFILEOPEN-1){
+						if(tmpRecvLen != TEC_EFFILELIST-1){
 							assert(0);
 							break;
 						}
-						
-						memcpy(localfilename,cmdParams+4,EXFAT_UTF8_NAME_BUFFER_MAX);
-						//dwCreationDisposition = *(DWORD *)cmdParams;
-						memcpy(&dwCreationDisposition,cmdParams,sizeof(dwCreationDisposition));
+						char backdata[TEA_EFDIRLIST]={0};
+						int bdoff = 5;
+						memcpy(localfilename,cmdParams+1,EXFAT_UTF8_NAME_BUFFER_MAX);
 						
 						char * shortname  = strchr((char *)localfilename,'\\');
 						while( shortname  != NULL ){
@@ -758,7 +767,36 @@ DWORD WorkerThread(LPVOID p)
 								len--;
 							}
 							localfilename[0] = '/';
-						}*/
+						}
+						exfat_node * pparentnode = NULL;
+						rc = exfat_lookup(ef,&pparentnode,localfilename);
+						if(rc == 0){
+							struct exfat_iterator it;
+							
+							ReleaseMutex(ghMutex);
+							rc = exfat_opendir(ef,pparentnode,&it);
+							if(rc == 0){
+								while(node = exfat_readdir(&it)){
+									char utf8str[EXFAT_NAME_MAX]={0};
+									exfat_utf16_to_utf8(utf8str,node->name,EXFAT_NAME_MAX,exfat_utf16_length(node->name));
+									
+									if(bdoff + strlen(utf8str)>= TEA_EFDIRLIST)
+										break;
+									rescount ++;
+									strcpy(&backdata[bdoff],utf8str);
+									bdoff += strlen(&backdata[bdoff]);
+										
+									bdoff ++;
+								}
+								exfat_closedir(ef,&it);
+							}
+							
+							exfat_put_node(ef,pparentnode);
+							ReleaseMutex(ghMutex);
+						}
+						backdata[0]= TECMD_EFDirList;
+						memcpy(&backdata[1] ,&rescount,sizeof(rescount));
+						sendret = send(sockConn, backdata, TEA_EFDIRLIST , 0);
 					}
 					break;
 				case TECMD_EFFsQuerySizes:

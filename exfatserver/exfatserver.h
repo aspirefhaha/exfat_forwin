@@ -20,6 +20,8 @@ enum TCPEXFAT_CMD {	//TCP Exfat Command
 	TECMD_EFFileQueryInfo,
 	TECMD_EFFileDelete,
 	TECMD_EFFsQuerySizes,
+	TECMD_EFFileSetSize,
+	TECMD_EFDirList,
 	TECMD_MAX
 };
 
@@ -38,6 +40,8 @@ enum TCPEXFAT_CMD {	//TCP Exfat Command
 #define TEC_EFFILEQUERYINFO	(1+8)	//TECMD_EFFileQueryInfo,
 #define TEC_EFFILEDELETE	(1+EXFAT_UTF8_NAME_BUFFER_MAX)	//TECMD_EFFileDelete,
 #define TEC_EFFSQUERYSIZES	(1)
+#define TEC_EFFILESETSIZE	(1+8+8)	//
+#define TEC_EFFILELIST		(1+EXFAT_UTF8_NAME_BUFFER_MAX)
 #define TEC_CMDMAX	1	//TECMD_MAX
 //};
 
@@ -56,6 +60,8 @@ enum TCPEXFAT_CMD {	//TCP Exfat Command
 #define TEA_EFFILEQUERYINFO	(1+sizeof(EFFSOBJINFO))	//TECMD_EFFileQueryInfo,
 #define TEA_EFFILEDELETE	(1+4)	//TECMD_EFFileDelete,
 #define TEA_EFFSQUERYSIZES	(1+8+8+4+4)
+#define TEA_EFFILESETSIZE	(1+8+4)
+#define TEA_EFDIRLIST		(1+EXFAT_UTF8_NAME_BUFFER_MAX)
 #define TEA_CMDMAX	1	//TECMD_MAX
 
 

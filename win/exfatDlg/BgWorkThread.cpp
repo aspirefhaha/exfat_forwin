@@ -30,8 +30,8 @@ void BgWorkThread::run()
 				totalsize += getOutSubItemSize((*iter));
 			}
 			qlonglong leftsize = ((qlonglong)exfat_count_free_clusters(ef)) << (ef->sb->spc_bits+ef->sb->sector_bits);
-			sprintf_s(tmpstr,100,"leftsize %lld\n",leftsize);
-			OutputDebugStringA(tmpstr);
+			//sprintf_s(tmpstr,100,"leftsize %lld\n",leftsize);
+			//OutputDebugStringA(tmpstr);
 			if (totalsize >= (leftsize - 1024 * 1024*1024LL) * 0.95)
 			{
 				emit updateSize(1000);
@@ -52,20 +52,18 @@ void BgWorkThread::run()
 		break;
 	case WMCOPYTOOUTER:
 		{
-			int totalcount = 0;
-			QList<QString>::Iterator iter = m_selPaths.begin();
+			qlonglong totalsize = 0;
 			QList<QPair<QString,QString>> selSources;
-			for(;iter!=m_selPaths.end() && !m_bIsQuit;iter++){
-				QString curPath = (*iter);
-				QDir updir(curPath);
-				if(updir.cdUp()){
-					QString filename;
-					totalcount += getInSubItemCount(updir.absoluteFilePath(filename),curPath,selSources);
+			struct exfat_node * pnode;
+			for(int i = 0 ;i<m_selPaths.size();i++){
+				if(exfat_lookup(ef,&pnode,m_selPaths.at(i).toStdString().c_str())==0){
+					totalsize += pnode->size;
+					selSources.append(QPair<QString,QString>(m_selPaths.at(i),m_outtertarget));
+					exfat_put_node(ef,pnode);
 				}
-				
 			}
-			emit calcItemCount(0,selSources.size());
 			
+			emit updateSize(totalsize);
 			CopyFilesToOuter(selSources);
 		}
 		break;
@@ -75,6 +73,7 @@ void BgWorkThread::run()
 quint64 BgWorkThread::CopyDirToExfat(QString &sourcedir,QString & targetdir,quint64 cursize)
 {
 	QFileInfo fileinfo(sourcedir);
+	int sendIdx = 0;
 	char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
 	
 	QString targetdirname ;
@@ -104,7 +103,10 @@ quint64 BgWorkThread::CopyDirToExfat(QString &sourcedir,QString & targetdir,quin
 		}
 		else{
 			localcursize +=  CopyFileToExfat(curdirname,subtargetdir,localcursize);
-			emit updateProg(localcursize);
+			if(sendIdx++%10==0){
+				emit updateProg(localcursize);
+				msleep(1);
+			}
 		}
     }
 	emit updateProg(localcursize);
@@ -115,6 +117,7 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 {
 	QFile sourcef(sourcefile);
 	QFileInfo fileinfo(sourcefile);
+	int sendidx = 0;
 	
 	bool isOk =sourcef.open(QIODevice::ReadOnly );
     char * pbuf;
@@ -137,7 +140,6 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 			pbuf = (char *)malloc(bufsize);
 			do{
 				qint64 onceread = 0;
-				
 				onceread = sourcef.read(pbuf,bufsize);
 				if(onceread<=0){
 					break;
@@ -146,7 +148,10 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 				if(writensize == onceread){
 					curpos += writensize;
 					cursize += writensize;
-					emit updateProg(cursize);
+					if(sendidx++%10==0){
+						emit updateProg(cursize);
+						msleep(1);
+					}
 				}
 				else{
 					break;
@@ -167,54 +172,39 @@ quint64  BgWorkThread::CopyFileToExfat(QString &sourcefile,QString & targetdir,q
 int BgWorkThread::CopyFilesToOuter(QList<QPair<QString,QString>> & copyitems)
 {
 	m_alreadyCopyedCount = 0;
+	off_t curpos;
+	char tmpbuf[64*1024];
 	m_currentTotalCount = copyitems.size();
 	QPair<QString,QString> copyitem;
+	qlonglong  totalpossize = 0 ;
+	int sendeventcount = 0;
 	foreach(copyitem,copyitems){
-		QFileInfo fileinfo(copyitem.first);
-		char outpath[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
-		char tmpdirname[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
-		strcpy(tmpdirname,copyitem.second.toLocal8Bit().data());
-		int rootlen = strlen(tmpdirname);
-		strcpy(tmpdirname,copyitem.first.toLocal8Bit().data());
-		
-#if 0
-		char * pdirname = tmpdirname + rootlen;
-		sprintf_s(outpath,EXFAT_UTF8_NAME_BUFFER_MAX,"%s/%s",m_outtertarget.toStdString().c_str(),pdirname);
-		if(fileinfo.isDir()){
-			BOOL tExist = ExfatModel::pFunc->PathFileExists(outpath);
-			if(!tExist){
-				ExfatModel::pFunc->CreateDirectory(outpath,NULL);
-			}
-			m_alreadyCopyedCount++;
-			emit calcItemCount(m_alreadyCopyedCount,m_currentTotalCount);
-		}
-		else{
-			do{
-				QFile ifile(copyitem.first);
-				if(!ifile.open(QIODevice::ReadOnly)){
-					break;
-				}
-				HANDLE th = (HANDLE)ExfatModel::pFunc->CreateFile(outpath,GENERIC_WRITE,0,NULL,CREATE_NEW,FILE_FLAG_RANDOM_ACCESS,NULL);
-				if(th == (HANDLE)-1 || th == (HANDLE)0){
-					break;
-				}
-				char tmpdata[ExfatModel::ONCEBLOCK];
-				int readlen = 0;
-				DWORD tRetLen = 0;
-				do{
-					readlen = (int)ifile.read(tmpdata,ExfatModel::ONCEBLOCK);
-					if(readlen >0){
-						ExfatModel::pFunc->WriteFile((long long )th,tmpdata,readlen,&tRetLen,NULL);
-					}
-				}while(readlen > 0 && tRetLen == readlen);
-				ExfatModel::pFunc->CloseHandle((long long)th);
-				ifile.close();
+		QString sourcename = copyitem.first;
+		exfat_node * pnode;
+		QFileInfo appInfo(sourcename);
+		QFile targetfile(copyitem.second + appInfo.baseName() + "." + appInfo.suffix());
+		if(!targetfile.open(QIODevice::Truncate | QIODevice::WriteOnly))
+			continue;
 
-			}while(0);
-			m_alreadyCopyedCount++;
-			emit calcItemCount(m_alreadyCopyedCount,m_currentTotalCount);
+		if(exfat_lookup(ef,&pnode,sourcename.toStdString().c_str())==0){
+			curpos = 0;
+			size_t readsize = exfat_generic_pread(ef,pnode,tmpbuf,64*1024,curpos);
+			while(readsize>0){
+				targetfile.write(tmpbuf,readsize);
+				curpos += readsize;
+				totalpossize += readsize;
+				readsize = exfat_generic_pread(ef,pnode,tmpbuf,64*1024,curpos);
+				if(sendeventcount++%100==0){
+					emit updateProg(totalpossize);
+					msleep(100);
+				}
+			}
+			exfat_flush_node(ef,pnode);
+			exfat_put_node(ef,pnode);
+			targetfile.flush();
+			targetfile.close();
 		}
-#endif
+
 	}
 	emit copyDone(0);
 	return 0;
@@ -225,6 +215,7 @@ int BgWorkThread::CopyFilesToExfat(QList<QString> selOutPaths,QString intargetdi
 	m_alreadyCopyedCount = 0;
 	QList<QString>::Iterator iter = m_selPaths.begin();
 	quint64 cursize = 0;
+	int sendidx = 0;
 	for(;iter!=m_selPaths.end() && !m_bIsQuit;iter++){
 		QFileInfo fileinfo(*iter);
 		if(fileinfo.isDir()){ // is a dir
@@ -232,7 +223,10 @@ int BgWorkThread::CopyFilesToExfat(QList<QString> selOutPaths,QString intargetdi
 		}
 		else{ // is a file 
 			cursize += CopyFileToExfat(*iter,intargetdir,cursize);
-			emit updateProg(cursize);
+			if(sendidx++%10==0){
+				emit updateProg(cursize);
+				msleep(1);
+			}
 		}
 	}
 	emit copyDone(0);
@@ -343,6 +337,7 @@ size_t BgWorkThread::getFileDirSize(const char * abspath)
 				sprintf(subAbsPath,"%s/%s",abspath,fd.cFileName);
 				totalsize += getFileDirSize(subAbsPath);
 				emit updateSize(totalsize);
+				msleep(1);
 				isFinished = (ExfatModel::pFunc->FindNextFile(hFindFile, &fd) == FALSE);  
 			}  
           

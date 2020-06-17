@@ -35,7 +35,7 @@
 #else
 #include <Windows.h>
 
-#define USENEWAPI 1
+#define USENEWAPI 0
 #if USENEWAPI
 #include "xDiskInterface.h"
 #else
@@ -144,6 +144,7 @@ char FIRST512KCACHE[0x80000];
 
 void xdisk_init()
 {
+#if USEXDISK
 #if USENEWAPI
 	if(glibXDisk==NULL){
 		glibXDisk = LoadLibraryA("xDiskInterface.dll");
@@ -266,15 +267,18 @@ void xdisk_init()
 	}
 	
 #endif
+#endif
 }
 
 static void xdisk_uninit()
 {
+#if USEXDISK
 	if(glibXDisk != NULL){
 		FreeLibrary(glibXDisk);
 		glibXDisk = NULL;
 		OutputDebugString("xdisk_uninit !!!!!!!!!!!!!!!\n");
 	}
+#endif
 }
 //TODO need change to USB Flash
 int fsync(int fd) 
@@ -287,14 +291,47 @@ int fsync(int fd)
 #define XDISKCURTOTALSIZE (50000LL*1024LL*1024L)
 #endif
 
-
+#ifdef _DEBUG
+int needDebug = 1;
+#else
 int needDebug = 0;
+#endif
 
-int pread(HANDLE fd, char * buf, size_t size, off_t off)
+
+long long  pread(HANDLE fd, char * buf, size_t size, off_t off)
 {
-
 #if USEXDISK==0
-	off_t ret = lseek((int)fd,  off, SEEK_SET);
+	long long readsize = 0;
+	DWORD resize = 0;
+#ifdef WIN32
+	LONG offh,offl;
+	offh = (off>>32)&0xffffffff;
+	offl = off & 0xffffffff;
+	if( SetFilePointer (fd, offl,&offh,FILE_BEGIN)==0xffffffff)
+		return 0;
+
+
+#if _DEBUG
+	
+	if(needDebug){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
+		OutputDebugString((LPCSTR)errbuf);
+	}
+#endif
+	
+	if(ReadFile(fd, buf, size,&resize,NULL)==FALSE){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\read failed at %llx size %llu ret %lld\n",off,size,readsize);
+		OutputDebugString((LPCSTR)errbuf);
+		return 0;
+		
+	}
+	readsize = resize;
+	return readsize;
+#else
+	off_t ret = _lseeki64((int)fd,  off, SEEK_SET);
+	long long readsize = 0;
 #if _DEBUG
 	
 	if(needDebug){
@@ -306,7 +343,16 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 	if (ret == (off_t)-1) {
 		return 0;
 	}
-	return read((int)fd, buf, size);
+	readsize =  _read((int)fd, buf, size);
+	if(readsize != size){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\read failed at %llx size %llu ret %lld\n",off,size,readsize);
+		OutputDebugString((LPCSTR)errbuf);
+		return readsize;
+		
+	}
+	return readsize;
+#endif
 #else
 #if USENEWAPI
 	BYTE tmpbuf[XDISKSECSIZE];
@@ -445,28 +491,60 @@ int pread(HANDLE fd, char * buf, size_t size, off_t off)
 }
 
 
-int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
+long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 {
-	char errbuf[256]={0};
-
 #if USEXDISK==0
-	off_t ret = lseek((int)fd,  off,SEEK_SET );
-	size_t writtensize = 0,readsize = 0;
-	unsigned char * readbuf = NULL;
+#ifdef WIN32
+	LONG offh,offl;
+	DWORD wesize = 0;
+	offh = (off>>32)&0xffffffff;
+	offl = off & 0xffffffff;
+	if( SetFilePointer (fd, offl,&offh,FILE_BEGIN)==0xffffffff)
+		return 0;
+
+
 #ifdef _DEBUG
 	do{
 		if(needDebug){
+			char errbuf[256]={0};
 			sprintf_s(errbuf,256,"\t\twant write at %llx size %u\n",off,size);
 			OutputDebugString((LPCSTR)errbuf);
 		}
 	}while(0);
 #endif
-	if (ret == (off_t)-1) {
+	
+	if(WriteFile(fd, buf, size,&wesize,NULL)==FALSE){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"!!!!!!!!!!!write failed at %llx size %llu ret %d\n",off,size,wesize);
+		OutputDebugString((LPCSTR)errbuf);
 		return 0;
+		
 	}
-	writtensize =  write((int)fd, buf, size);
+	return wesize;
+
+#else
+	off_t ret = _lseeki64((int)fd,  off,SEEK_SET );
+	size_t writtensize = 0,readsize = 0;
+	unsigned char * readbuf = NULL;
+#ifdef _DEBUG
+	do{
+		if(needDebug){
+			char errbuf[256]={0};
+			sprintf_s(errbuf,256,"\t\twant write at %llx size %llu\n",off,size);
+			OutputDebugString((LPCSTR)errbuf);
+		}
+	}while(0);
+#endif
+	if (ret == (off_t)-1) {
+		return -1;
+	}
+	writtensize =  _write((int)fd, buf, size);
 	if(writtensize != size){
-		return 0;
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\write failed at %llx size %llu ret %lld\n",off,size,writtensize);
+		OutputDebugString((LPCSTR)errbuf);
+		return writtensize;
+		
 	}
 	//readbuf = (unsigned char*)malloc(size);
 	//ret = lseek((int)fd,off,SEEK_SET);
@@ -477,7 +555,8 @@ int pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	//else
 	//	ret = size;
 	//free(readbuf);
-	return ret;
+	return writtensize;
+#endif
 #else
 #if USENEWAPI
 	BYTE tmpbuf[XDISKSECSIZE];
@@ -684,7 +763,9 @@ static HANDLE open_ro(const char* spec)
 	return hDisk;
 #endif
 #else
-	return (HANDLE)open(spec, O_RDONLY | O_BINARY);
+	//return (HANDLE)open(spec, O_RDONLY | O_BINARY);
+	HANDLE file = CreateFile(spec, GENERIC_READ , 0, NULL, OPEN_EXISTING, 0, NULL);
+	return file;
 #endif
 #else
 	return open(spec, O_RDONLY);
@@ -693,7 +774,6 @@ static HANDLE open_ro(const char* spec)
 
 static HANDLE open_rw(const char* spec)
 {
-#ifdef WIN32
 
 #if USEXDISK
 #if USENEWAPI
@@ -713,11 +793,15 @@ static HANDLE open_rw(const char* spec)
 	return hDisk;
 #endif
 #else
-	int fd = open(spec, O_RDWR | O_BINARY );
-	return (HANDLE)fd;
-#endif
+#ifdef WIN32
+	HANDLE file = CreateFile(spec, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	//int fd = open(spec, O_RDWR | O_BINARY );
+	return file;
+
 #else
 	int fd = open(spec, O_RDWR);
+	return (HANDLE)fd;
+#endif
 #endif
 #ifdef __linux__
 	int ro = 0;
@@ -813,6 +897,9 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		return NULL;
 	}
 #if USEXDISK==0
+#ifdef WIN32
+
+#else
 	if (fstat(dev->fd, &stbuf) != 0)
 	{
 		close(dev->fd);
@@ -830,6 +917,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		exfat_error("'%s' is neither a device, nor a regular file", spec);
 		return NULL;
 	}
+#endif
 #endif
 #if defined(__APPLE__)
 	if (!S_ISREG(stbuf.st_mode))
@@ -886,23 +974,9 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #if defined(WIN32) && !defined(WIN64)
 #if 1
 #if USEXDISK==0
-		struct mystat {
-        _dev_t     st_dev;
-        _ino_t     st_ino;
-        unsigned short st_mode;
-        short      st_nlink;
-        short      st_uid;
-        short      st_gid;
-        _dev_t     st_rdev;
-        size_t     st_size;
-        time_t st_atime;
-        time_t st_mtime;
-        time_t st_ctime;
-        };
-		struct _stat64 statbuf;
-		//fstat(dev->fd,(struct stat *)&statbuf);
-		_fstat64(dev->fd, &statbuf);
-		dev->size = statbuf.st_size;
+		DWORD              dwFileSize,dwHighSize;
+		dwFileSize = GetFileSize (dev->fd, &dwHighSize) ;
+		dev->size = (((long long)dwHighSize) << 32) | dwFileSize; 
 #else
 #if USENEWAPI
 		//TODO
@@ -936,24 +1010,29 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		_fseeki64(fp,0,SEEK_SET);
 		//fclose(fp);
 #endif
-		//dev->size = exfat_seek(dev, 0, SEEK_END);
 #else
-		//dev->size = exfat_seek(dev, 0, SEEK_END);
 		
 		
 #ifdef WIN32
-		struct _stat64 statbuf;		
-		_fstat64(dev->fd, &statbuf);
+		//struct _stat64 statbuf;		
+		//_fstat64(dev->fd, &statbuf);
+		DWORD              dwFileSize,dwHighSize;
+		dwFileSize = GetFileSize (dev->fd, &dwHighSize) ;
+		dev->size = (((long long)dwHighSize) << 32) | dwFileSize; 
 #else
 		struct stat statbuf;
 		fstat(dev->fd,(struct stat *)&statbuf);
-#endif
 		dev->size = statbuf.st_size;
+#endif
 #endif
 		if (dev->size <= 0)
 		{
 #if USEXDISK==0
+#ifdef WIN32
+			CloseHandle(dev->fd);
+#else
 			close(dev->fd);
+#endif
 #else
 			xdisk_uninit();
 #endif
@@ -964,7 +1043,11 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		if (exfat_seek(dev, 0, SEEK_SET) == -1)
 		{
 #if USEXDISK==0
+#ifdef WIN32
+			CloseHandle(dev->fd);
+#else
 			close(dev->fd);
+#endif
 #else
 			xdisk_uninit();
 #endif
@@ -991,7 +1074,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 		return NULL;
 	}
 #endif
-#if USE512KCACHE
+#if USE512KCACHE && USEXDISK
 	//TODO
 	//Handle multi disk err
 #if USENEWAPI
@@ -1016,11 +1099,15 @@ int exfat_close(struct exfat_dev* dev)
 #endif
 	
 #if USEXDISK==0
+#ifdef WIN32
+	CloseHandle(dev->fd);
+#else
 	if (close(dev->fd) != 0)
 	{
 		exfat_error("failed to close device: %s", strerror(errno));
 		rc = -EIO;
 	}
+#endif
 #else
 #if USENEWAPI
 	xdisk_init();
@@ -1074,7 +1161,19 @@ off_t exfat_seek(struct exfat_dev* dev, off_t offset, int whence)
 	return dev->pos = lseek(dev->fd, offset, whence);
 #else
 #if USEXDISK==0	
-	return lseek(dev->fd, offset, whence);
+#ifdef WIN32
+	off_t ret = offset;
+	LONG offh,offl;
+	offh = (offset>>32)&0xffffffff;
+	offl = offset & 0xffffffff;
+	if( SetFilePointer (dev->fd, offl,&offh,whence)==0xffffffff)
+		ret = -1;
+	else
+		ret = offset;
+	return ret;
+#else
+	return _lseeki64(dev->fd, offset, whence);
+#endif
 #else
 	switch(whence){
 	case SEEK_SET:
@@ -1117,7 +1216,15 @@ long long  exfat_read(struct exfat_dev* dev, void* buffer, size_t size)
 	return result;
 #else
 #if USEXDISK==0
+#ifdef WIN32
+	DWORD readsize;
+	if(  ReadFile(dev->fd, (char *)buffer, size,&readsize,NULL))
+		return readsize;
+	else
+		return 0;
+#else
 	return read(dev->fd,buffer,size);
+#endif
 #else
 	int readsize = pread(dev->fd, (char *)buffer, size,dev->curpos);
 	dev->curpos += readsize;
@@ -1135,7 +1242,15 @@ long long  exfat_write(struct exfat_dev* dev, const void* buffer, size_t size)
 	return result;
 #else
 #if USEXDISK==0
+#ifdef WIN32
+	DWORD writensize = 0;
+	if( WriteFile(dev->fd,buffer,size,&writensize,NULL)){
+		writensize = size;
+	}
+	return writensize;
+#else
 	return  write(dev->fd, buffer, size);
+#endif
 #else
 	int writesize = pwrite(dev->fd,(char*)buffer,size,dev->curpos);
 	dev->curpos += writesize;
@@ -1216,6 +1331,7 @@ long long exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 		const void* buffer, size_t size, off_t offset)
 {
 	uint64_t newsize = offset;
+	int64_t pwrite_ret = 0;
 	int rc;
 	cluster_t cluster;
 	const char* bufp = (const char *)buffer;
@@ -1255,10 +1371,10 @@ long long exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 			return -EIO;
 		}
 		lsize = MIN(CLUSTER_SIZE(*ef->sb) - loffset, remainder);
-		if (exfat_pwrite(ef->dev, bufp, lsize,
-				exfat_c2o(ef, cluster) + loffset) < 0)
+		pwrite_ret = exfat_pwrite(ef->dev, bufp, lsize,exfat_c2o(ef, cluster) + loffset);
+		if (pwrite_ret < 0)
 		{
-			exfat_error("failed to write cluster %#x", cluster);
+			exfat_error("failed to write cluster %#x  ret %lld", cluster,pwrite_ret);
 			return -EIO;
 		}
 		bufp += lsize;

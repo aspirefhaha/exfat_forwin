@@ -142,7 +142,11 @@ struct exfat_dev
 #if USEXDISK
 	HANDLE fd;
 #else
+#ifdef WIN32
+	HANDLE fd;
+#else
 	int fd;
+#endif
 #endif
 	enum exfat_mode mode;
 	off_t size; /* in bytes */

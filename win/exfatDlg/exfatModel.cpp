@@ -20,6 +20,8 @@ extern "C"{
 	#include "../../mkfs/mkexfat.h"
 }
 
+static bool needSDebug = false;
+
 ExfatModel::ExfatModel(QObject *parent)
 	: QAbstractItemModel(parent)
 {
@@ -606,7 +608,8 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 				struct exfat * ef = parentData->m_pexfatRoot;
 				struct exfat_node * prootdir  = exfat_get_node(ef->root);
 				struct exfat_node* node;
-				OutputDebugString("in drive rowCount\n");
+				if(needSDebug)
+					OutputDebugString("in drive rowCount\n");
 				do{
 					struct exfat_iterator it;
 					rc = exfat_opendir(ef, prootdir, &it);
@@ -630,7 +633,8 @@ int ExfatModel::rowCount(const QModelIndex &parent ) const
 				struct exfat * ef = parentData->m_pexfatRoot;
 				struct exfat_node * pdir ;
 				char utf8str[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
-				OutputDebugString("in dir rowCount\n");
+				if(needSDebug)
+					OutputDebugString("in dir rowCount\n");
 				exfat_utf16_to_utf8(utf8str,(const le16_t *)parentData->absPath.data(),EXFAT_UTF8_NAME_BUFFER_MAX,parentData->absPath.length());
 				rc = exfat_lookup(ef,&pdir,utf8str);
 				if(rc!=0)

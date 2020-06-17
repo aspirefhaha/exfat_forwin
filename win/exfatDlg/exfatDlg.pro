@@ -4,17 +4,18 @@
 
 TEMPLATE = app
 TARGET = exfatDlg
-#QMAKE_LFLAGS *= /MACHINE:X64
+QMAKE_LFLAGS *= /MACHINE:X64
 DEFINES += "_MBCS" USEXDISK=0 
 DEPENDPATH += . GeneratedFiles
 INCLUDEPATH += . ../../libexfat
 CONFIG += debug
 
 #LIBS += -L../InEnvDirPlugin/debug 
-LIBS += -L../../libexfat -lexfat -L../../mkfs -lmkfs
+
 !contains(QMAKE_TARGET.arch, x86_64) {
     message("x64 build")
-    ## Windows x64 (64bit) specific build here       
+    ## Windows x64 (64bit) specific build here  
+	LIBS += -L../../x64/Debug/ -llibexfat -lmkfs     
 } else {
     message("x86 build")
     ## Windows x86 (32bit) specific build here

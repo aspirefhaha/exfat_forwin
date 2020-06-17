@@ -7,7 +7,7 @@
 #pragma comment(lib,"mkfs.lib")
 #else
 #pragma comment(lib,"libexfat.lib")
-#pragma comment(lib,"mkfs.lib")
+//#pragma comment(lib,"mkfs.lib")
 #endif
 #include <qdebug.h>
 #include "exfatModel.h"
@@ -284,7 +284,7 @@ void exfatDlg::sltFormat()
 	::close(fd);
 #endif
 #else
-#if 0
+#if defined(WIN32)
 	DWORD nWritten = 0;
 
 	HANDLE hFile = CreateFileA(filename.toStdString().c_str(),GENERIC_WRITE|GENERIC_READ,          
@@ -292,7 +292,8 @@ void exfatDlg::sltFormat()
 		NULL,         
 		CREATE_ALWAYS,         
 		0,         
-		NULL);     
+		NULL);  
+	
 	DWORD dwTemp;     
 	DeviceIoControl(hFile,         
 		FSCTL_SET_SPARSE,          
@@ -302,9 +303,10 @@ void exfatDlg::sltFormat()
 		0,        
 		&dwTemp,         
 		NULL); 
+		
 	LARGE_INTEGER li;
 
-	li.QuadPart = fssizeg;
+	li.QuadPart = fssizeg-1;
 
 	li.LowPart = SetFilePointer (hFile,
 		li.LowPart,
@@ -334,7 +336,7 @@ void exfatDlg::sltFormat()
 		OutputDebugStringA(strerror(errno));
 		return;
 	}
-	ret = write(fd,"\0",1);
+	//ret = write(fd,"\0",1);
 	if(ret != 1){
 		perror("write 1 byte failed!");
 	}
@@ -387,6 +389,57 @@ void exfatDlg::sltAddFile(bool sel)
 		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
 		qDebug() << "add file here" << index;
 		qDebug() << pItemData->absPath;
+	}
+}
+
+void exfatDlg::sltExport(bool sel)
+{
+	QModelIndex curIndex = ui.tv_main->currentIndex();    
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		
+		char selfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+		QString selabsname ;
+		selabsname = pItemData->absPath;
+
+				
+		exfat_utf16_to_utf8(selfilename,(const le16_t *)selabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,selabsname.length());
+		struct exfat_node * pnode;
+		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
+			
+			char tmperr[200];
+			int rc = 0;
+			
+			exfat_put_node(pItemData->m_pexfatRoot,pnode);
+			QString seloutdir = QFileDialog::getExistingDirectory(this);
+			dia.setMinimum(0);//设置最小值
+			dia.setMaximum(1000);//设置最大值
+			dia.setValue(0);//设置进度条数值
+
+			//如何实时更新进度条？
+			//创建一个新线程或通过使用信号与槽获取实时的value值，后台不断的下载或者更新
+			//通过set和get方法传递value值，最后通过setValue()实时更新进度条
+			
+			bgcopyTh.setWorkMode(WMCOPYTOOUTER);
+			QList<QString> selfiles  ;
+			selfiles<<selabsname;
+			bgcopyTh.setSelPath(selfiles);
+			bgcopyTh.setOutTargetDir(seloutdir);
+			bgcopyTh.setExfat(pItemData->m_pexfatRoot);
+			bgcopyTh.start();
+			dia.exec();	
+			QMessageBox::information(this, seloutdir,selabsname, QMessageBox::Ok,QMessageBox::Ok);
+			
+		}
+		
+		QModelIndex rbindex = index.sibling(index.row(),3);
+		exfatModel.notifyChange(index,rbindex);
 	}
 }
 
@@ -570,6 +623,7 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 			menu.addAction(tr("Edit"), this, SLOT(sltEdit(bool))); 
 			menu.addAction(tr("Rename"),this,SLOT(sltRename(bool)));
 			menu.addAction(tr("Delete"),this,SLOT(sltDelete(bool)));
+			menu.addAction(tr("Export"),this,SLOT(sltExport(bool)));
 			break;
 		case EXFTDIR:
 			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  

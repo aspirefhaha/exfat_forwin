@@ -34,6 +34,7 @@ protected slots:
 	void sltAddDir(bool);
 	void sltRename(bool);
 	void sltDelete(bool);
+	void sltExport(bool);
 	void sltAddFile(bool);
 	void sltProperties(bool);
 	void sltContextMenu(const QPoint &);

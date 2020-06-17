@@ -36,7 +36,7 @@ struct threadParam {
  
 static int clientNum = 0;
 static HANDLE ghMutex = INVALID_HANDLE_VALUE;
-static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
+//static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
 
 void myexit()
 {
@@ -51,15 +51,17 @@ void myexit()
 		CloseHandle(ghMutex);
 		ghMutex=NULL;
 	}
-	if(ghWRMutex != NULL){
-		CloseHandle(ghWRMutex);
-		ghWRMutex = NULL;
-	}
+	//if(ghWRMutex != NULL){
+	//	CloseHandle(ghWRMutex);
+	//	ghWRMutex = NULL;
+	//}
 }
 
-
+#ifdef _DEBUG
+int wantDebugServer = 1;
+#else
 int wantDebugServer = 0;
-
+#endif
 DWORD WorkerThread(LPVOID p)
 {
 	char tmpstr[MAX_LOADSTRING];
@@ -236,13 +238,15 @@ DWORD WorkerThread(LPVOID p)
 							OutputDebugString(tmpstr);
 						}
 #endif
-						WaitForSingleObject(ghWRMutex,INFINITE);
+						//WaitForSingleObject(ghWRMutex,INFINITE);
+						WaitForSingleObject(ghMutex,INFINITE);
 	
 						exfat_flush_node(ef,pnode);
 						exfat_put_node(ef,pnode);
 						
-						ReleaseMutex(ghWRMutex);
 						pnode->curpos = 0;
+						//ReleaseMutex(ghWRMutex);
+						ReleaseMutex(ghMutex);
 						do{
 							char backdata[TEA_EFFILECLOSE]={0};
 							backdata[0]= TECMD_EFFileClose;
@@ -332,7 +336,7 @@ DWORD WorkerThread(LPVOID p)
 						}
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
 						memcpy(&offSeek,&cmdParams[8],sizeof(offSeek));
-						memcpy(&uMethod,&cmdParams[12],sizeof(uMethod));
+						memcpy(&uMethod,&cmdParams[16],sizeof(uMethod));
 #if _DEBUG
 						if(wantDebugServer){
 							char tmpmsg[256]={0};
@@ -410,9 +414,11 @@ DWORD WorkerThread(LPVOID p)
 						}
 #endif
 						//WaitForSingleObject(ghWRMutex,INFINITE);
+						WaitForSingleObject(ghMutex,INFINITE);
 						long long  retsize =  exfat_generic_pread(ef,pnode,pvBuf+TEA_EFFILEREAD,realToRead,pnode->curpos);
 						pnode->curpos += retsize;
 						//ReleaseMutex(ghWRMutex);
+						ReleaseMutex(ghMutex);
 						do{
 							pvBuf[0]= TECMD_EFFileRead;
 							memcpy(&pvBuf[1] ,&retsize,sizeof(retsize));
@@ -504,7 +510,45 @@ DWORD WorkerThread(LPVOID p)
 						}while(0);
 					}
 					break;
-				
+				case TECMD_EFFileSetSize:
+					{
+						char cmdParams[TEC_EFFILESETSIZE-1]={0};
+						unsigned long long newFileSize = 0;
+						int tmpRecvLen = 0;
+						int curLen = 1;
+						char rc = -1;
+						struct exfat_node* pnode = NULL;
+						while(tmpRecvLen < (TEC_EFFILESETSIZE-1) && curLen >0){
+							curLen =  recv(sockConn,cmdParams+tmpRecvLen,TEC_EFFILESETSIZE-1-tmpRecvLen,0);
+							tmpRecvLen += curLen;
+						}
+						if(tmpRecvLen != TEC_EFFILESETSIZE-1){
+							assert(0);
+							break;
+						}
+						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
+						memcpy(&newFileSize,&cmdParams[8],sizeof(unsigned long long));
+						
+						//int rc = exfat_flush_node(ef,pnode);
+						rc = exfat_truncate(ef,pnode,newFileSize,0);
+#if _DEBUG
+						if(wantDebugServer){
+							char tmpmsg[256]={0};
+							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+							exfat_get_name(pnode,localfilename);
+							sprintf_s(tmpstr,256,"want set file %s from size %lld to size %lld rc %d\n",localfilename,pnode->size,newFileSize,rc);
+							OutputDebugString(tmpstr);
+						}
+#endif	
+						do{
+							char backdata[TEA_EFFILESETSIZE]={0};
+							backdata[0]= TECMD_EFFileSetSize;
+							memcpy(&backdata[1] ,&pnode->size,sizeof(pnode->size));
+							memcpy(&backdata[9], & rc,sizeof(rc));
+							sendret = send(sockConn, backdata, TEA_EFFILESETSIZE , 0);
+						}while(0);
+					}
+					break;
 				case TECMD_EFFileGetSize:
 					{
 						char cmdParams[TEC_EFFILEGETSIZE-1]={0};
@@ -676,6 +720,47 @@ DWORD WorkerThread(LPVOID p)
 						
 					}
 					break;
+				case TECMD_EFDirList:
+					{
+						//TODO
+						/*char cmdParams[TEC_EFFILEOPEN-1]={0};
+						int tmpRecvLen = 0;
+						int curLen = 1;
+						char rc = -1;
+						
+						struct exfat_node* node = NULL;
+						int findres = -1;
+						DWORD dwCreationDisposition=0;
+						char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+						while(tmpRecvLen < TEC_EFFILEOPEN-1 && curLen >0){
+							curLen =  recv(sockConn,cmdParams+tmpRecvLen,TEC_EFFILEOPEN-1-tmpRecvLen,0);
+							tmpRecvLen += curLen;
+						}
+						if(tmpRecvLen != TEC_EFFILEOPEN-1){
+							assert(0);
+							break;
+						}
+						
+						memcpy(localfilename,cmdParams+4,EXFAT_UTF8_NAME_BUFFER_MAX);
+						//dwCreationDisposition = *(DWORD *)cmdParams;
+						memcpy(&dwCreationDisposition,cmdParams,sizeof(dwCreationDisposition));
+						
+						char * shortname  = strchr((char *)localfilename,'\\');
+						while( shortname  != NULL ){
+							*shortname = '/';
+							shortname = strchr((char*)localfilename,'\\');
+						}
+						if(localfilename[0] != '/')
+						{
+							int len = strlen(localfilename);
+							while(len>0){
+								localfilename[len] = localfilename[len-1];
+								len--;
+							}
+							localfilename[0] = '/';
+						}*/
+					}
+					break;
 				case TECMD_EFFsQuerySizes:
 					{
 						RTFOFF pcbTotal = ef->dev->size;
@@ -738,7 +823,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	ghMutex = CreateMutex(NULL,FALSE,NULL);
-	ghWRMutex = CreateMutex(NULL,FALSE,NULL);
+	//ghWRMutex = CreateMutex(NULL,FALSE,NULL);
 #if 0
  	// TODO: Place code here.
 	MSG msg={0};

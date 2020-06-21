@@ -5,7 +5,7 @@
 TEMPLATE = app
 TARGET = exfatDlg
 QMAKE_LFLAGS *= /MACHINE:X64
-DEFINES += "_MBCS" USEXDISK=0 
+DEFINES += "_MBCS" USEXDISK=1 
 DEPENDPATH += . GeneratedFiles
 INCLUDEPATH += . ../../libexfat
 CONFIG += debug

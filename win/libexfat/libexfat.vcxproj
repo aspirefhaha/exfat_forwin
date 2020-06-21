@@ -90,7 +90,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK=0;_FILE_OFFSET_BITS=64;_CRT_SECURE_NO_WARNINGS;__STDC_VERSION__=199901;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK=1;_FILE_OFFSET_BITS=64;_CRT_SECURE_NO_WARNINGS;__STDC_VERSION__=199901;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -104,7 +104,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DLL_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WIN64;WIN64;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>USEXDISK=1;DLL_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WIN64;WIN64;WIN32;_DEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -120,7 +120,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK=0;WIN32;NDEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DLL_EXPORTS;USEXDISK=1;WIN32;NDEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -138,7 +138,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WIN64;DLL_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN64;WIN32;NDEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN64;DLL_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN64;WIN32;USEXDISK=1;NDEBUG;LIBEXFAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>

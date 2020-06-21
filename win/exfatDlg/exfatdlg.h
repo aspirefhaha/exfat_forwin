@@ -25,6 +25,8 @@ private:
 	QProgressDialog dia;
 	BgWorkThread bgcopyTh;
 	qint64 m_progesssize ;
+	QTime startTime;
+
 
 protected slots:
 	void sltFormat();

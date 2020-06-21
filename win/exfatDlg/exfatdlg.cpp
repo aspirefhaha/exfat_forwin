@@ -2,12 +2,13 @@
 
 #include <stdio.h>
 #include <QtGui>
+//#include <TextLabel.h>
 #ifdef _DEBUG
 #pragma comment(lib,"libexfat.lib")
 #pragma comment(lib,"mkfs.lib")
 #else
 #pragma comment(lib,"libexfat.lib")
-//#pragma comment(lib,"mkfs.lib")
+#pragma comment(lib,"mkfs.lib")
 #endif
 #include <qdebug.h>
 #include "exfatModel.h"
@@ -91,6 +92,7 @@ void exfatDlg::copyDone(int res)
 	QModelIndex curheadidx = curidx.sibling(curidx.row(),0);
 	ui.tv_main->collapse(curheadidx);
 	ui.tv_main->expand(curheadidx);
+	ui.lb_speed->setText("");
 	if(res<0){
 		QMessageBox::warning(this, tr("Copy Res"), tr("Failed!!!!"),QMessageBox::Ok,QMessageBox::Ok);
 	}
@@ -100,7 +102,8 @@ void exfatDlg::updateCpSize(qlonglong tsize)
 {
 	//dia.set();
 	dia.setMaximum(1000);//设置最大值
-	m_progesssize = tsize;		
+	m_progesssize = tsize;	
+	startTime = QTime::currentTime();
 
 }
 
@@ -108,6 +111,17 @@ void exfatDlg::updateCpProg(qlonglong prog)
 {
 	//dia.close();
 	dia.setValue(prog*1000/m_progesssize);//设置进度条数值
+	QTime curTime = QTime::currentTime();
+	QString speedStr;
+	if(startTime.secsTo(curTime)==0){
+		speedStr = QString("Calc...");
+	}
+	else if(startTime.secsTo(curTime)<0){
+		speedStr = QString("%1 kB/S").arg(prog / 1024 /( startTime.secsTo(curTime) + 24 * 60 * 60)); 
+	}
+	else
+		speedStr = QString("%1 kB/S").arg(prog / 1024 /( startTime.secsTo(curTime))); 
+	ui.lb_speed->setText(speedStr);
 }
 
 void exfatDlg::dragEnterEvent(QDragEnterEvent * enterEvent)

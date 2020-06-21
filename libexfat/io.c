@@ -35,7 +35,7 @@
 #else
 #include <Windows.h>
 
-#define USENEWAPI 0
+#define USENEWAPI 1
 #if USENEWAPI
 #include "xDiskInterface.h"
 #else
@@ -64,6 +64,7 @@
 #ifdef WIN32
 HINSTANCE  glibXDisk = NULL;
 #define USE512KCACHE 1
+#define USEBC4BUF	1
 #if USENEWAPI
 API_OpenXDisk  pOpenXDisk = NULL;
 API_CloseXDisk pCloseXDisk = NULL;
@@ -139,7 +140,14 @@ API_IsReadProtectEx pIsReadProtectEx;
 #endif
 
 #if USEXDISK
-char FIRST512KCACHE[0x80000];
+#define F512CSIZE	0x100000
+char FIRST512KCACHE[F512CSIZE];
+#if USEBC4BUF
+#define BC4SIZE	0x10000
+off_t bc4off =  0;
+int bc4valid = 0;
+char bc4buf[BC4SIZE]={0};
+#endif
 #endif
 
 void xdisk_init()
@@ -310,9 +318,7 @@ long long  pread(HANDLE fd, char * buf, size_t size, off_t off)
 	if( SetFilePointer (fd, offl,&offh,FILE_BEGIN)==0xffffffff)
 		return 0;
 
-
 #if _DEBUG
-	
 	if(needDebug){
 		char errbuf[256]={0};
 		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
@@ -359,10 +365,18 @@ long long  pread(HANDLE fd, char * buf, size_t size, off_t off)
 	int readsec = 0;
 	size_t needsize = size;
 	size_t firstsecsize = 0;
+
+#if _DEBUG
+	if(needDebug){
+		char errbuf[256]={0};
+		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
+		OutputDebugString((LPCSTR)errbuf);
+	}
+#endif
 #if USE512KCACHE
 	do{
-		if(off <0x80000){
-			if(off + needsize <=0x80000){
+		if(off <F512CSIZE){
+			if(off + needsize <=F512CSIZE){
 				memcpy(buf,&FIRST512KCACHE[off],needsize);
 				return needsize;
 			}
@@ -370,19 +384,41 @@ long long  pread(HANDLE fd, char * buf, size_t size, off_t off)
 		}
 	}while(0);
 #endif
-#if _DEBUG
+#if USEBC4BUF
+	do{
+		size_t needreadnum = BC4SIZE /XDISKSECSIZE;
+		if(size > 32 ){
+			break;
+		}
+		if(bc4valid){
+			if(off>=bc4off & (off+size)<=(bc4off+BC4SIZE)){
+				memcpy(buf,&bc4buf[off - bc4off],size);
+				return size;
+			}
+			else{
+				bc4valid = 0;
+			}
+		}
+		bc4off = off / XDISKSECSIZE * XDISKSECSIZE;
+		if(bc4off + BC4SIZE > off + size){
+			if(pReadHideSector(fd, bc4off/XDISKSECSIZE,(BYTE *)bc4buf,needreadnum,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)){
+				bc4valid = 1;
+				memcpy(buf,&bc4buf[off - bc4off],size);
+				return size;
+			}
+			else{
+				sprintf((char *)tmpbuf,"first read failed at 0x%llx size %d errcode 0x%x\n",bc4off,BC4SIZE,pGetError());
+				OutputDebugString((LPCSTR)tmpbuf);
+			}
+		}
+	}while(0);
 	
-	if(needDebug){
-		char errbuf[256]={0};
-		sprintf_s(errbuf,256,"\t\twant read at %llx size %u\n",off,size);
-		OutputDebugString((LPCSTR)errbuf);
-	}
+
 #endif
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
 		firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
 		if(pReadHideSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)){
-			
 			memcpy(buf,&tmpbuf[off - startoff],firstsecsize);
 		}
 		else{
@@ -436,8 +472,8 @@ long long  pread(HANDLE fd, char * buf, size_t size, off_t off)
 
 #if USE512KCACHE
 	do{
-		if(off <0x80000){
-			if(off + needsize <=0x80000){
+		if(off <F512CSIZE){
+			if(off + needsize <=F512CSIZE){
 				memcpy(buf,&FIRST512KCACHE[off],needsize);
 				return needsize;
 			}
@@ -566,12 +602,12 @@ long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	size_t firstsecsize = 0;
 #if USE512KCACHE
 	do{
-		if(off <0x80000){
-			if(off + needsize <=0x80000){
+		if(off <F512CSIZE){
+			if(off + needsize <=F512CSIZE){
 				memcpy(&FIRST512KCACHE[off],buf,needsize);
 			}
 			else{
-				int cpysize = 0x80000 - off;
+				int cpysize = F512CSIZE - off;
 				memcpy(&FIRST512KCACHE[off],buf,cpysize);
 			}
 		}
@@ -581,18 +617,26 @@ long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 #ifdef _DEBUG
 	do{
 		if(needDebug){
+			char errbuf[256]={0};
 			sprintf_s(errbuf,256,"\t\twant write at %llx size %u\n",off,size);
 			OutputDebugString((LPCSTR)errbuf);
 		}
 	}while(0);
 #endif
-	
+
+#if USEBC4BUF
+	if(bc4valid && ((off > bc4off && (off< (bc4off+BC4SIZE))) || ( off <= bc4off) && (( off + size ) > bc4off)) ){
+		bc4valid = 0;
+	}
+#endif
+
 	if(off%XDISKSECSIZE!=0){ //start pos is not XDISKSECSIZE aligned
 		off_t startoff = off / XDISKSECSIZE * XDISKSECSIZE;
 		firstsecsize = (off - startoff + needsize) > XDISKSECSIZE ? (startoff + XDISKSECSIZE - off) : needsize ;
 		if(pReadHideSector(fd, startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)){
 			memcpy(&tmpbuf[off - startoff],buf,firstsecsize);
 			if(pWriteHideSector(fd,startoff / XDISKSECSIZE,tmpbuf,1,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)==FALSE){
+				char errbuf[256]={0};
 				sprintf((char *)errbuf,"first write at write failed at 0x%llx size %d errcode 0x%x\n",off,firstsecsize,pGetError());
 				OutputDebugString((LPCSTR)errbuf);
 			}
@@ -609,6 +653,7 @@ long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 		off_t curoff = off / XDISKSECSIZE;
 		size_t cursecnum = needsize/XDISKSECSIZE;
 		if(pWriteHideSector(fd,curoff,(BYTE *)buf+firstsecsize,cursecnum,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)==FALSE){
+			char errbuf[256]={0};
 			sprintf((char *)errbuf,"mid write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE*cursecnum,pGetError());
 			OutputDebugString((LPCSTR)errbuf);
 			
@@ -623,6 +668,7 @@ long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 		if(pReadHideSector(fd, off / XDISKSECSIZE,tmpbuf,1,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)){
 			memcpy(tmpbuf,buf + firstsecsize + readsec * XDISKSECSIZE,needsize);
 			if(pWriteHideSector(fd,off/XDISKSECSIZE,tmpbuf,1,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE)==FALSE){
+				char errbuf[256]={0};
 				sprintf((char *)errbuf,"last write at write failed at 0x%llx size %d errcode 0x%x\n",off,XDISKSECSIZE,pGetError());
 				OutputDebugString((LPCSTR)errbuf);
 				
@@ -642,12 +688,12 @@ long long  pwrite(HANDLE fd, char * buf, size_t size, off_t off)
 	size_t firstsecsize = 0;
 #if USE512KCACHE
 	do{
-		if(off <0x80000){
-			if(off + needsize <=0x80000){
+		if(off <F512CSIZE){
+			if(off + needsize <=F512CSIZE){
 				memcpy(&FIRST512KCACHE[off],buf,needsize);
 			}
 			else{
-				int cpysize = 0x80000 - off;
+				int cpysize = F512CSIZE - off;
 				memcpy(&FIRST512KCACHE[off],buf,cpysize);
 			}
 		}
@@ -971,7 +1017,7 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 #endif
 	{
 		/* works for Linux, FreeBSD, Solaris */
-#if defined(WIN32) && !defined(WIN64)
+#if defined(WIN32)
 #if 1
 #if USEXDISK==0
 		DWORD              dwFileSize,dwHighSize;
@@ -1078,9 +1124,9 @@ struct exfat_dev* exfat_open(const char* spec, enum exfat_mode mode)
 	//TODO
 	//Handle multi disk err
 #if USENEWAPI
-	pReadHideSector(dev->fd, 0,(BYTE *)&FIRST512KCACHE,0x80000/512,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE);
+	pReadHideSector(dev->fd, 0,(BYTE *)&FIRST512KCACHE,F512CSIZE/512,FALSE,NULL,XDISK_ENCRYPT_TYPE_NONE);
 #else
-	pReadPrivateUserSector(dev->fd,0,(BYTE *)&FIRST512KCACHE,0x80000/512,NULL);
+	pReadPrivateUserSector(dev->fd,0,(BYTE *)&FIRST512KCACHE,F512CSIZE/512,NULL);
 #endif
 #endif
 	return dev;

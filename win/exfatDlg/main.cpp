@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
-	QTranslator translator;  
+	QTranslator translator; 
     translator.load(QString(":/qm/zh_CN.qm")); 
 	a.installTranslator(&translator);
 	exfatDlg w;

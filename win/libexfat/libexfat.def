@@ -78,6 +78,8 @@ EXPORTS
 	exfat_fix_invalid_node_checksum
 	exfat_fix_unknown_entry
 
+	xdisk_setKeyMode
+	xdisk_getKeyMode
 	set_ef
 	get_ef
 	mountFS

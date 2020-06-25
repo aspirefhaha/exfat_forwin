@@ -13,6 +13,7 @@
 #include <qdebug.h>
 #include "exfatModel.h"
 #include "exnotepad.h"
+#include "secmode.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -370,8 +371,30 @@ void exfatDlg::sltFormat()
       128,                   // 指定lpReturnedString指向的缓冲区的大小
 	  "./VBox.ini"
 	);
+	QDateTime curDateTime=QDateTime::currentDateTime();
+	QString keystr = curDateTime.toString("yyyyMMddHHmmsszzzz");
 	QString tmpQStr = tmpstr;
 	exfatModel.setFsFilename(tmpQStr);
+	SecModeDlg smdlg;
+	
+	//QString md5;  
+	QByteArray ba,bb;  
+	QCryptographicHash md(QCryptographicHash::Md5);  
+	ba.append(keystr);  
+	md.addData(ba);  
+	bb = md.result();  
+	//md5.append(bb.toHex());  
+	smdlg.setKey(QString(bb.toHex()));
+	if(smdlg.exec()==QDialog::Accepted){
+		int secm = smdlg.GetKeyMode();
+		xdisk_setKeyMode(tmpstr,(BYTE *)bb.data(),secm);
+		exfatModel.resetfs();
+		OutputDebugStringA("Accepted\n");
+	}
+	else{
+		OutputDebugStringA("Rejected\n");
+		return;
+	}
 #endif
 	exfatModel.resetfs();
 }
@@ -435,6 +458,9 @@ void exfatDlg::sltExport(bool sel)
 			dia.setMinimum(0);//设置最小值
 			dia.setMaximum(1000);//设置最大值
 			dia.setValue(0);//设置进度条数值
+			if(!seloutdir.endsWith('\\')){
+				seloutdir = seloutdir + "\\";
+			}
 
 			//如何实时更新进度条？
 			//创建一个新线程或通过使用信号与槽获取实时的value值，后台不断的下载或者更新
@@ -477,6 +503,7 @@ void exfatDlg::sltDelete(bool sel)
 		exfat_utf16_to_utf8(selfilename,(const le16_t *)selabsname.data(),EXFAT_UTF8_NAME_BUFFER_MAX,selabsname.length());
 		struct exfat_node * pnode;
 		if(exfat_lookup(pItemData->m_pexfatRoot,&pnode,selfilename)==0){
+			//exfat_truncate(pItemData->m_pexfatRoot,pnode,0,0);
 			if(exfat_unlink(pItemData->m_pexfatRoot,pnode)==0){
 				char tmperr[200];
 				int rc = 0;

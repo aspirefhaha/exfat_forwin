@@ -21,12 +21,14 @@ CONFIG += debug
     ## Windows x86 (32bit) specific build here
 }
 # Input
-HEADERS += exfatdlg.h exfatModel.h exnotepad.h BgWorkThread.h
+HEADERS += exfatdlg.h exfatModel.h exnotepad.h BgWorkThread.h secmode.h
 FORMS += exfatdlg.ui \
-          exnotepad.ui
+          exnotepad.ui \
+		  secmode.ui
 SOURCES += exfatdlg.cpp \
            exfatModel.cpp \
 		   exnotepad.cpp \
+		   secmode.cpp \
 		   BgWorkThread.cpp \
            main.cpp 
 RESOURCES += exfatdlg.qrc

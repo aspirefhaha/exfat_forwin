@@ -311,6 +311,10 @@ EXFAT_EXPORT struct exfat * get_ef(void);
 
 EXFAT_EXPORT struct exfat * mountFS(const char * fspath);
 
+EXFAT_EXPORT int xdisk_setKeyMode(const char* spec,BYTE * newkey, int secmode);
+
+EXFAT_EXPORT int xdisk_getKeyMode(const char* spec,BYTE * savedkey, int * pmode);
+
 
 #ifdef __cplusplus
 }

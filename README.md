@@ -29,6 +29,16 @@ On Windows
 	lrelease zh_CN.ts
 	```
 
+    * To Build exfatDlg for Windows 64bit, use shell below
+    ```
+    #add qt path to PATH 
+    set PATH=D:\VBox\qt-4.7.3\bin:%PATH%
+    qmake xxx.pro
+    nmake 
+    nmake relase
+    nmake clean
+    ```
+
 To build this project on GNU/Linux you need to install the following packages:
 
 * [git][4]

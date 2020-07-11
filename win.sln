@@ -37,6 +37,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "exfatserver", "exfatserver\
 		{8F926870-3A4D-4AD1-9CE5-406188CE5498} = {8F926870-3A4D-4AD1-9CE5-406188CE5498}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VerifyUseData", "win\VerifyUseData\VerifyUseData.vcxproj", "{B1C5D538-BF23-4147-801B-2CEFF47301A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -114,6 +116,14 @@ Global
 		{228E9020-70D7-4F4A-9D14-752BBF172CC1}.Release|Win32.Build.0 = Release|Win32
 		{228E9020-70D7-4F4A-9D14-752BBF172CC1}.Release|x64.ActiveCfg = Release|x64
 		{228E9020-70D7-4F4A-9D14-752BBF172CC1}.Release|x86.ActiveCfg = Release|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Debug|Win32.Build.0 = Debug|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Debug|x64.ActiveCfg = Debug|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Debug|x86.ActiveCfg = Debug|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Release|Win32.ActiveCfg = Release|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Release|Win32.Build.0 = Release|Win32
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Release|x64.ActiveCfg = Release|x64
+		{B1C5D538-BF23-4147-801B-2CEFF47301A3}.Release|x86.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

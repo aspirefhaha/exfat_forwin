@@ -610,16 +610,24 @@ DWORD WorkerThread(LPVOID p)
 						}
 						memcpy(&pnode,&cmdParams[0],sizeof(struct exfat_node*));
 #if _DEBUG
-						if(wantDebugServer){
-							char tmpmsg[256]={0};
-							char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
-							exfat_get_name(pnode,localfilename);
-							sprintf_s(tmpstr,256,"want check file %s valid\n",localfilename);
-							OutputDebugString(tmpstr);
-						}
+						//if(wantDebugServer){
+						//	char tmpmsg[256]={0};
+						//	char localfilename[EXFAT_UTF8_NAME_BUFFER_MAX]={0};
+						//	exfat_get_name(pnode,localfilename);
+						//	sprintf_s(tmpstr,256,"want check file %s valid\n",localfilename);
+						//	OutputDebugString(tmpstr);
+						//}
 #endif						
 						//int rc = exfat_flush_node(ef,pnode);
-						rc = pnode->is_unlinked;
+						try{
+							if(((unsigned int)pnode)<0x2000)
+								rc =1;
+							else
+								rc = pnode->is_unlinked;
+						}
+						catch(...){
+							rc = 1;
+						}
 						do{
 							char backdata[TEA_EFFILEISVALID]={0};
 							backdata[0]= TECMD_EFFileIsValid;
@@ -892,6 +900,17 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	return (int) msg.wParam;
 #endif
+	
+	HANDLE m_hMutex = NULL;
+ 
+	m_hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, "AJISWifiShareTool");
+	if (m_hMutex == NULL) {
+		m_hMutex = CreateMutex(NULL, TRUE, "AJISWifiShareTool");
+	}
+	else {
+		::MessageBoxA(NULL,"冲突程序exfatDlg已经启动，不能运行本服务","ERROR",MB_OK);
+		return -1;
+	}
 	char tmpstr[MAX_LOADSTRING];
 	
 	//加载套接字库

@@ -34,6 +34,8 @@ protected slots:
 	void sltEdit(bool);
 	void sltEdit(const QModelIndex &);
 	void sltAddDir(bool);
+	void sltImportFiles(bool);
+	void sltImportDir(bool);
 	void sltRename(bool);
 	void sltDelete(bool);
 	void sltExport(bool);

@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "exfatserver.h"
 #include <Windows.h>
-
+#include <tlhelp32.h>
 #include <stdio.h>
 #include <WinSock2.h>
 #include <assert.h>
@@ -37,7 +37,7 @@ struct threadParam {
 static int clientNum = 0;
 static HANDLE ghMutex = INVALID_HANDLE_VALUE;
 //static HANDLE ghWRMutex = INVALID_HANDLE_VALUE;
-
+HANDLE m_hMutex = NULL;
 void myexit()
 {
 	char tmpstr[MAX_LOADSTRING]={0};
@@ -51,10 +51,40 @@ void myexit()
 		CloseHandle(ghMutex);
 		ghMutex=NULL;
 	}
+	if(m_hMutex != NULL){
+		CloseHandle(m_hMutex);
+		m_hMutex = NULL;
+	}
 	//if(ghWRMutex != NULL){
 	//	CloseHandle(ghWRMutex);
 	//	ghWRMutex = NULL;
 	//}
+}
+
+int CheckVBoxSVC()
+{
+	int hasVBoxSVC = 0;
+	HANDLE procSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if(procSnap == INVALID_HANDLE_VALUE)
+	{
+		printf("CreateToolhelp32Snapshot failed, %d ",GetLastError());
+		return 0;
+	}
+	PROCESSENTRY32 procEntry = { 0 };
+	procEntry.dwSize = sizeof(PROCESSENTRY32);
+	BOOL bRet = Process32First(procSnap,&procEntry);
+
+	while(bRet)
+	{
+		printf("PID: %d (%s) ", procEntry.th32ProcessID, procEntry.szExeFile);
+		if(strstr(procEntry.szExeFile,"VBoxSVC")!=NULL){
+			hasVBoxSVC=1;
+			break;
+		}
+		bRet = Process32Next(procSnap, &procEntry);
+	}
+	CloseHandle(procSnap);
+	return hasVBoxSVC;
 }
 
 #ifdef _DEBUG
@@ -849,11 +879,27 @@ DWORD WorkerThread(LPVOID p)
 	sprintf_s(tmpstr,MAX_LOADSTRING,"Now Client Num  %d\n",clientNum);
 	OutputDebugString(tmpstr);
 	WaitForSingleObject(ghMutex,INFINITE);
-	if(clientNum<=0){
+	if(clientNum<=0 ){
 		ReleaseMutex(ghMutex);
-		sprintf_s(tmpstr,MAX_LOADSTRING,"Now Client Num  %d,Need Exit\n",clientNum);
-		OutputDebugString(tmpstr);
-		exit(0);
+		while(1){
+			Sleep(1000);
+			if(CheckVBoxSVC()!=0){
+				WaitForSingleObject(ghMutex,INFINITE);
+				if(clientNum>0){
+					ReleaseMutex(ghMutex);
+					break;
+				}
+				ReleaseMutex(ghMutex);
+			}
+			else{
+				sprintf_s(tmpstr,MAX_LOADSTRING,"Now Client Num  %d,Need Exit\n",clientNum);
+				OutputDebugString(tmpstr);
+				exit(0);
+				break;
+			}
+		}
+		
+		
 		return 0;
 	}
 	ReleaseMutex(ghMutex);
@@ -899,18 +945,24 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 
 	return (int) msg.wParam;
-#endif
-	
-	HANDLE m_hMutex = NULL;
- 
+#endif 
 	m_hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, "AJISWifiShareTool");
 	if (m_hMutex == NULL) {
-		m_hMutex = CreateMutex(NULL, TRUE, "AJISWifiShareTool");
+		//m_hMutex = CreateMutex(NULL, TRUE, "AJISWifiShareTool");
 	}
 	else {
 		::MessageBoxA(NULL,"冲突程序exfatDlg已经启动，不能运行本服务","ERROR",MB_OK);
 		return -1;
 	}
+	m_hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, "ExfatServerShareTool");
+	if (m_hMutex == NULL) {
+		m_hMutex = CreateMutex(NULL, TRUE, "ExfatServerShareTool");
+	}
+	else {
+		//::MessageBoxA(NULL,"冲突程序exfatDlg已经启动，不能运行本服务","ERROR",MB_OK);
+		return -1;
+	}
+
 	char tmpstr[MAX_LOADSTRING];
 	
 	//加载套接字库

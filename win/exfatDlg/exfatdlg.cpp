@@ -236,13 +236,7 @@ void exfatDlg::dropEvent(QDropEvent * event)
 			bgcopyTh.start();
 			dia.exec();
 		}
-
-		
-
 	}
-
-	
-
 }
 
 exfatDlg::~exfatDlg()
@@ -568,6 +562,107 @@ void exfatDlg::sltRename(bool sel)
 	}
 }
 
+void exfatDlg::sltImportDir(bool sel)
+{
+	QModelIndex curIndex = ui.tv_main->currentIndex();    
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		QFileDialog *fileDialog = new QFileDialog(this);
+        fileDialog->setWindowTitle(tr("Select Directory"));
+        fileDialog->setDirectory(".");
+		fileDialog->setFileMode(QFileDialog::DirectoryOnly);
+        fileDialog->setFilter(tr("Dirs(*)"));
+        if(fileDialog->exec() == QDialog::Accepted) {
+                QList<QString> urlList = fileDialog->selectedFiles();
+				dia.setMinimum(0);//设置最小值
+				dia.setMaximum(1000);//设置最大值
+				dia.setValue(0);//设置进度条数值
+				ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+				if(pItemData->fstype == EXFTFILE){
+					pItemData = static_cast<ExfatFSPrivate*>(index.parent().internalPointer());
+				}
+			
+				bgcopyTh.setWorkMode(WMCPTOEXF);
+				QList<QString> selfiles ;
+				//selfiles << fileName;
+				for(int k = 0;k<urlList.size();k++){
+					QString tfileName=urlList.at(k);
+					selfiles<<tfileName;
+				}
+				bgcopyTh.setSelPath(selfiles);
+				if(pItemData->fstype==EXFTDRIVE){
+					QString tmpStr = "/";
+
+					bgcopyTh.setTarget(tmpStr);
+				}
+				else
+					bgcopyTh.setTarget(pItemData->absPath);
+				bgcopyTh.setExfat(pItemData->m_pexfatRoot);
+				bgcopyTh.start();
+				dia.exec();
+                //QMessageBox::information(NULL, tr("Path"), tr("You selected ") + path);
+        } else {
+                //QMessageBox::information(NULL, tr("Path"), tr("You didn't select any files."));
+        }
+	}
+}
+
+void exfatDlg::sltImportFiles(bool sel)
+{
+	QModelIndex curIndex = ui.tv_main->currentIndex();    
+	QModelIndex index = curIndex.sibling(curIndex.row(),0); //同一行第一列元素的index    
+	if(index.isValid()){
+		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+		//qDebug() << "add dir here" << index;
+		//qDebug() << pItemData->absPath;
+		QModelIndex parent = index.parent();
+		ui.tv_main->collapse(parent);
+		ui.tv_main->expand(parent);
+		QFileDialog *fileDialog = new QFileDialog(this);
+        fileDialog->setWindowTitle(tr("Select Files and Directories"));
+        fileDialog->setDirectory(".");
+		fileDialog->setFileMode(QFileDialog::ExistingFiles);
+        fileDialog->setFilter(tr("Files(*)"));
+        if(fileDialog->exec() == QDialog::Accepted) {
+                QList<QString> urlList = fileDialog->selectedFiles();
+				dia.setMinimum(0);//设置最小值
+				dia.setMaximum(1000);//设置最大值
+				dia.setValue(0);//设置进度条数值
+				ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
+				if(pItemData->fstype == EXFTFILE){
+					pItemData = static_cast<ExfatFSPrivate*>(index.parent().internalPointer());
+				}
+			
+				bgcopyTh.setWorkMode(WMCPTOEXF);
+				QList<QString> selfiles ;
+				//selfiles << fileName;
+				for(int k = 0;k<urlList.size();k++){
+					QString tfileName=urlList.at(k);
+					selfiles<<tfileName;
+				}
+				bgcopyTh.setSelPath(selfiles);
+				if(pItemData->fstype==EXFTDRIVE){
+					QString tmpStr = "/";
+
+					bgcopyTh.setTarget(tmpStr);
+				}
+				else
+					bgcopyTh.setTarget(pItemData->absPath);
+				bgcopyTh.setExfat(pItemData->m_pexfatRoot);
+				bgcopyTh.start();
+				dia.exec();
+        } else {
+                //QMessageBox::information(NULL, tr("Path"), tr("You didn't select any files."));
+        }
+	}
+}
+
 void exfatDlg::sltAddDir(bool sel)
 {
 	QModelIndex curIndex = ui.tv_main->currentIndex();    
@@ -623,7 +718,6 @@ void exfatDlg::sltEdit(const QModelIndex & curIndex)
 		ExfatFSPrivate* pItemData = static_cast<ExfatFSPrivate*>(index.internalPointer());
 		if(pItemData->fstype== EXFTFILE){
 			qDebug() << "double should edit here" << index;
-			
 			editFile(index);
 		}
 		
@@ -659,6 +753,8 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 		switch(pItemData->fstype){
 		case EXFTDRIVE:
 			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  
+			menu.addAction(tr("Import Dir"), this, SLOT(sltImportDir(bool)));
+			menu.addAction(tr("Import Files"), this , SLOT(sltImportFiles(bool)));
 			break;
 		case EXFTFILE:
 			menu.addAction(tr("Edit"), this, SLOT(sltEdit(bool))); 
@@ -667,6 +763,8 @@ void exfatDlg::sltContextMenu(const QPoint & pos)
 			menu.addAction(tr("Export"),this,SLOT(sltExport(bool)));
 			break;
 		case EXFTDIR:
+			menu.addAction(tr("Import Dir"), this, SLOT(sltImportDir(bool)));
+			menu.addAction(tr("Import Files"), this , SLOT(sltImportFiles(bool)));
 			menu.addAction(tr("Add Dir"), this, SLOT(sltAddDir(bool)));  
 			menu.addAction(tr("Add File"), this, SLOT(sltAddFile(bool)));  
 			menu.addAction(tr("Rename"),this,SLOT(sltRename(bool)));

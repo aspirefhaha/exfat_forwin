@@ -12,9 +12,12 @@ int main(int argc, char *argv[])
 	a.installTranslator(&translator);
 	HANDLE m_hMutex = NULL;
  
-	m_hMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, "AJISWifiShareTool");
+	m_hMutex = OpenMutexA(MUTEX_ALL_ACCESS, FALSE, "ExfatServerShareTool");
 	if (m_hMutex == NULL) {
 		m_hMutex = CreateMutexA(NULL, TRUE, "AJISWifiShareTool");
+		if(m_hMutex==NULL){
+			return -1;
+		}
 	}
 	else {
 		QMessageBox::warning(NULL, "warning", QString::fromLocal8Bit("冲突服务exfatserver已经启动，本程序无法运行"), QMessageBox::Abort , QMessageBox::Abort);
@@ -26,5 +29,7 @@ int main(int argc, char *argv[])
 	w.setLocale(QLocale("zh_CN.UTF-8"));
 	w.show();
 	
-	return a.exec();
+	int ret = a.exec();
+	CloseHandle(m_hMutex);
+	return ret;
 }
